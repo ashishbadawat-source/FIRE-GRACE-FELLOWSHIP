@@ -1,0 +1,98 @@
+{
+  "entities": {
+    "users": {
+      "title": "Users",
+      "description": "Church members, pastors, and administrators",
+      "type": "object",
+      "properties": {
+        "memberId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "mobile": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "member"] },
+        "ministry": { "type": "string" },
+        "referralCode": { "type": "string" },
+        "sponsorId": { "type": "string" },
+        "referralPoints": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["memberId", "fullName", "email", "role"]
+    },
+    "sermons": {
+      "title": "Sermons",
+      "description": "Church sermons and video messages",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "speaker": { "type": "string" },
+        "date": { "type": "string" },
+        "series": { "type": "string" },
+        "youtubeUrl": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["title", "speaker", "date", "youtubeUrl"]
+    },
+    "songs": {
+      "title": "Worship Songs",
+      "description": "Worship songs and audio tracks",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "artist": { "type": "string" },
+        "audioUrl": { "type": "string" },
+        "duration": { "type": "string" },
+        "lyrics": { "type": "string" }
+      },
+      "required": ["title", "artist", "audioUrl"]
+    },
+    "events": {
+      "title": "Church Events",
+      "description": "Upcoming services and fellowship events",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["title", "date", "time", "location"]
+    },
+    "prayerRequests": {
+      "title": "Prayer Requests",
+      "description": "Member prayer requests and praises",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "request": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["request", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profile documents"
+    },
+    "/sermons/{sermonId}": {
+      "schema": "sermons",
+      "description": "Sermon records"
+    },
+    "/songs/{songId}": {
+      "schema": "songs",
+      "description": "Song records"
+    },
+    "/events/{eventId}": {
+      "schema": "events",
+      "description": "Event schedules"
+    },
+    "/prayerRequests/{prayerId}": {
+      "schema": "prayerRequests",
+      "description": "Prayer requests"
+    }
+  }
+}

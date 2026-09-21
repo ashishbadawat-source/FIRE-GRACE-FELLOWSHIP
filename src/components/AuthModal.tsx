@@ -17,7 +17,7 @@ const AVATAR_OPTIONS = [
 ];
 
 export const AuthModal: React.FC = () => {
-  const { authModalOpen, authModalTab, closeAuthModal, openAuthModal, login, register, detectedRefCode } = useAuth();
+  const { authModalOpen, authModalTab, closeAuthModal, openAuthModal, login, loginAsAdmin, register, detectedRefCode } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot'>('login');
   const [showPassword, setShowPassword] = useState(false);
@@ -142,16 +142,38 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const fillDemoAdmin = () => {
+  const fillDemoAshish = async () => {
+    setErrorMessage('');
+    setIsLoading(true);
+    const res = await loginAsAdmin();
+    setIsLoading(false);
+    if (!res.success) {
+      setErrorMessage(res.error || 'Admin login failed.');
+    }
+  };
+
+  const fillDemoAdmin = async () => {
     setLoginIdentifier('admin@firegrace.org');
     setLoginPassword('Admin@123456');
     setErrorMessage('');
+    setIsLoading(true);
+    const res = await login('admin@firegrace.org', 'Admin@123456');
+    setIsLoading(false);
+    if (!res.success) {
+      setErrorMessage(res.error || 'Login failed.');
+    }
   };
 
-  const fillDemoMember = () => {
+  const fillDemoMember = async () => {
     setLoginIdentifier('grace.johnson@example.com');
     setLoginPassword('Member@123');
     setErrorMessage('');
+    setIsLoading(true);
+    const res = await login('grace.johnson@example.com', 'Member@123');
+    setIsLoading(false);
+    if (!res.success) {
+      setErrorMessage(res.error || 'Login failed.');
+    }
   };
 
   return (
@@ -235,6 +257,33 @@ export const AuthModal: React.FC = () => {
           {/* ---------------- LOGIN TAB ---------------- */}
           {activeTab === 'login' && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
+              {/* Instant 1-Click Admin Access Top Banner Button */}
+              <button
+                type="button"
+                onClick={fillDemoAshish}
+                disabled={isLoading}
+                className="w-full p-3 rounded-xl bg-gradient-to-r from-amber-500/25 via-yellow-500/35 to-amber-500/25 hover:from-amber-500/35 hover:to-yellow-500/45 border-2 border-amber-400 text-amber-300 font-bold text-xs flex items-center justify-between shadow-lg shadow-amber-500/20 transition group"
+              >
+                <div className="flex items-center gap-2.5 text-left">
+                  <div className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-sm">
+                    👑
+                  </div>
+                  <div>
+                    <div className="text-white font-bold text-xs">Direct Admin Access / एडमिन लॉगिन</div>
+                    <div className="text-[11px] text-amber-300 font-normal">Ashish Badawat (Senior Church Admin)</div>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 bg-amber-400 text-slate-950 font-bold text-[10px] rounded-lg tracking-wider group-hover:scale-105 transition">
+                  1-CLICK LOGIN ⚡
+                </span>
+              </button>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-800"></div>
+                <span className="flex-shrink mx-3 text-[11px] text-slate-500">or sign in with password</span>
+                <div className="flex-grow border-t border-slate-800"></div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email / Mobile / Member ID</label>
                 <div className="relative">
@@ -300,23 +349,46 @@ export const AuthModal: React.FC = () => {
               </button>
 
               {/* Quick demo fills */}
-              <div className="pt-3 border-t border-slate-800">
-                <p className="text-[11px] text-slate-400 mb-2 font-medium">Quick Demo Accounts:</p>
-                <div className="flex gap-2">
+              <div className="pt-3 border-t border-slate-800 space-y-2">
+                <p className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
+                  <span>⚡ Instant 1-Click Login:</span>
+                  <span className="text-[10px] text-amber-400/90 font-semibold">Click to login directly</span>
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={fillDemoAshish}
+                    className="py-2 px-2 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 rounded-lg text-[11px] text-amber-300 font-medium transition text-center leading-tight"
+                  >
+                    👑 <strong>Ashish</strong>
+                    <span className="block text-[9px] text-amber-400/70 font-normal">Admin</span>
+                  </button>
                   <button
                     type="button"
                     onClick={fillDemoAdmin}
-                    className="flex-1 py-1.5 px-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg text-[11px] text-amber-300 transition"
+                    className="py-2 px-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg text-[11px] text-amber-300 font-medium transition text-center leading-tight"
                   >
-                    👑 Admin Login (David)
+                    👑 <strong>Admin</strong>
+                    <span className="block text-[9px] text-amber-400/70 font-normal">General</span>
                   </button>
                   <button
                     type="button"
                     onClick={fillDemoMember}
-                    className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-[11px] text-slate-300 transition"
+                    className="py-2 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-[11px] text-slate-300 font-medium transition text-center leading-tight"
                   >
-                    👤 Member Login (Grace)
+                    👤 <strong>Grace</strong>
+                    <span className="block text-[9px] text-slate-400 font-normal">Member</span>
                   </button>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                  <div className="flex justify-between">
+                    <span>👑 <strong>Admin Password:</strong></span>
+                    <span className="font-mono text-amber-300">Admin@123456</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>👤 <strong>Member Password:</strong></span>
+                    <span className="font-mono text-slate-300">Member@123</span>
+                  </div>
                 </div>
               </div>
             </form>

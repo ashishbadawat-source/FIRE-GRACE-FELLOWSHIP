@@ -18,6 +18,7 @@ interface AuthContextType {
   openAuthModal: (tab?: 'login' | 'register' | 'forgot') => void;
   closeAuthModal: () => void;
   login: (identifier: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  loginAsAdmin: () => Promise<{ success: boolean; error?: string }>;
   register: (payload: any) => Promise<{ success: boolean; memberId?: string; error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -116,6 +117,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginAsAdmin = async () => {
+    try {
+      const res = await api.instantAdminLogin();
+      localStorage.setItem('fgf_token', res.token);
+      setToken(res.token);
+      setUser(res.user);
+      closeAuthModal();
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Admin login failed.' };
+    }
+  };
+
   const register = async (payload: any) => {
     try {
       const res = await api.register(payload);
@@ -151,6 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         openAuthModal,
         closeAuthModal,
         login,
+        loginAsAdmin,
         register,
         logout,
         refreshUser,

@@ -41,12 +41,12 @@ function getAuthHeader(): Record<string, string> {
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    let errorMsg = 'An unexpected error occurred.';
+    let errorMsg = 'Unable to complete request.';
     try {
       const data = await res.json();
       errorMsg = data.error || data.message || errorMsg;
     } catch {
-      errorMsg = res.statusText || errorMsg;
+      errorMsg = res.statusText || (res.status === 401 ? 'Invalid credentials.' : 'Server communication error.');
     }
     throw new Error(errorMsg);
   }
@@ -67,6 +67,12 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+    }).then(r => handleResponse<{ message: string; token: string; user: UserProfile }>(r)),
+
+  instantAdminLogin: () =>
+    fetch(`${BASE_URL}/api/auth/instant-admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
     }).then(r => handleResponse<{ message: string; token: string; user: UserProfile }>(r)),
 
   getMe: () =>

@@ -94,14 +94,63 @@ function getInitialData(): DatabaseSchema {
   const adminSalt = 'admin_fgf_salt_2026';
   const adminHash = hashPassword('Admin@123456', adminSalt).hash;
 
+  const ashishSalt = 'ashish_fgf_salt_2026';
+  const ashishHash = hashPassword('Admin@123456', ashishSalt).hash;
+
+  const aniketSalt = 'aniket_fgf_salt_2026';
+  const aniketHash = hashPassword('Admin@123456', aniketSalt).hash;
+
   const member1Salt = 'member1_fgf_salt';
   const member1Hash = hashPassword('Member@123', member1Salt).hash;
   const member2Salt = 'member2_fgf_salt';
   const member2Hash = hashPassword('Member@123', member2Salt).hash;
 
+  const ashishUser: StoredUser = {
+    id: 'usr_leader_001',
+    memberId: 'FGF10001',
+    fullName: 'Ashish Badawat',
+    mobile: '+91 7066463676',
+    email: 'ashishbadawat@gmail.com',
+    passwordHash: ashishHash,
+    salt: ashishSalt,
+    city: 'Pune',
+    state: 'Maharashtra',
+    country: 'India',
+    dob: '1990-01-01',
+    gender: 'Male',
+    ministry: 'Senior Church Leadership & Pastoral Team',
+    referralCode: 'FGF10001',
+    profilePhoto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
+    role: 'admin',
+    status: 'active',
+    createdAt: '2026-01-01T08:00:00.000Z',
+  };
+
+  const aniketUser: StoredUser = {
+    id: 'usr_leader_002',
+    memberId: 'FGF10002',
+    fullName: 'Aniket',
+    mobile: '+91 78418 17431',
+    email: 'aniket@firegrace.org',
+    passwordHash: aniketHash,
+    salt: aniketSalt,
+    city: 'Pune',
+    state: 'Maharashtra',
+    country: 'India',
+    dob: '1992-05-15',
+    gender: 'Male',
+    ministry: 'Church Leadership & Media Ministry',
+    sponsorId: 'FGF10001',
+    referralCode: 'FGF10002',
+    profilePhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
+    role: 'admin',
+    status: 'active',
+    createdAt: '2026-01-02T08:00:00.000Z',
+  };
+
   const adminUser: StoredUser = {
     id: 'usr_admin_001',
-    memberId: 'FGF10001',
+    memberId: 'FGF10000',
     fullName: 'Senior Pastor David Emmanuel',
     mobile: '+1 (555) 019-2834',
     email: 'admin@firegrace.org',
@@ -113,7 +162,7 @@ function getInitialData(): DatabaseSchema {
     dob: '1980-04-12',
     gender: 'Male',
     ministry: 'Pastoral Leadership',
-    referralCode: 'FGF10001',
+    referralCode: 'FGF10000',
     profilePhoto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
     role: 'admin',
     status: 'active',
@@ -121,8 +170,8 @@ function getInitialData(): DatabaseSchema {
   };
 
   const member1: StoredUser = {
-    id: 'usr_member_002',
-    memberId: 'FGF10002',
+    id: 'usr_member_003',
+    memberId: 'FGF10003',
     fullName: 'Grace Sarah Johnson',
     mobile: '+1 (555) 392-1082',
     email: 'grace.johnson@example.com',
@@ -135,7 +184,7 @@ function getInitialData(): DatabaseSchema {
     gender: 'Female',
     ministry: 'Worship Team',
     sponsorId: 'FGF10001',
-    referralCode: 'FGF10002',
+    referralCode: 'FGF10003',
     profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
     role: 'member',
     status: 'active',
@@ -143,8 +192,8 @@ function getInitialData(): DatabaseSchema {
   };
 
   const member2: StoredUser = {
-    id: 'usr_member_003',
-    memberId: 'FGF10003',
+    id: 'usr_member_004',
+    memberId: 'FGF10004',
     fullName: 'Joshua Caleb Miller',
     mobile: '+1 (555) 847-2911',
     email: 'joshua.miller@example.com',
@@ -156,8 +205,8 @@ function getInitialData(): DatabaseSchema {
     dob: '1995-11-03',
     gender: 'Male',
     ministry: 'Youth Fellowship',
-    sponsorId: 'FGF10002',
-    referralCode: 'FGF10003',
+    sponsorId: 'FGF10003',
+    referralCode: 'FGF10004',
     profilePhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
     role: 'member',
     status: 'active',
@@ -1003,7 +1052,7 @@ Jesus Christ, my living hope!`,
   ];
 
   return {
-    users: [adminUser, member1, member2],
+    users: [ashishUser, aniketUser, adminUser, member1, member2],
     referrals,
     sermons,
     songs,
@@ -1040,14 +1089,30 @@ class Database {
       if (fs.existsSync(DB_PATH)) {
         const raw = fs.readFileSync(DB_PATH, 'utf-8');
         const parsed = JSON.parse(raw);
+        const initial = getInitialData();
         if (!parsed.songs) {
-          parsed.songs = getInitialData().songs;
+          parsed.songs = initial.songs;
         }
         if (!parsed.donations) {
           parsed.donations = [];
         }
         if (!parsed.paymentDetails) {
-          parsed.paymentDetails = getInitialData().paymentDetails;
+          parsed.paymentDetails = initial.paymentDetails;
+        }
+        // Ensure default leadership accounts (Ashish, Aniket, Admin, Grace, Joshua) are present
+        if (!parsed.users || parsed.users.length === 0) {
+          parsed.users = initial.users;
+        } else {
+          for (const initUser of initial.users) {
+            const exists = parsed.users.some(
+              (u: any) =>
+                u.email?.toLowerCase() === initUser.email.toLowerCase() ||
+                u.memberId === initUser.memberId
+            );
+            if (!exists) {
+              parsed.users.unshift(initUser);
+            }
+          }
         }
         return parsed;
       }

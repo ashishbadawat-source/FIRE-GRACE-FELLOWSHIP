@@ -21,6 +21,7 @@ import { MeetingsView } from './views/MeetingsView';
 import { ActivitiesView } from './views/ActivitiesView';
 import { ContactView } from './views/ContactView';
 import { DonateView } from './views/DonateView';
+import { SongsView } from './views/SongsView';
 import { UserDashboard } from './views/UserDashboard';
 import { AdminDashboard } from './views/AdminDashboard';
 
@@ -65,11 +66,16 @@ const MainApp: React.FC = () => {
         {currentView === 'meetings' && <MeetingsView />}
         {currentView === 'activities' && <ActivitiesView />}
         {currentView === 'contact' && <ContactView />}
-        {(currentView === 'donate' || currentView === 'give' || currentView === 'giving') && (
+        {['songs', 'worship', 'music'].includes(currentView) && <SongsView />}
+        {['donate', 'give', 'giving'].includes(currentView) && (
           <DonateView onNavigate={handleNavigate} />
         )}
-        {currentView === 'dashboard' && <UserDashboard onNavigate={handleNavigate} />}
-        {currentView === 'admin' && <AdminDashboard />}
+        {['dashboard', 'user-dashboard', 'user_dashboard', 'member-dashboard'].includes(currentView) && (
+          <UserDashboard onNavigate={handleNavigate} />
+        )}
+        {['admin', 'admin-dashboard', 'admin_dashboard', 'adminpanel', 'admin-panel'].includes(currentView) && (
+          <AdminDashboard />
+        )}
       </main>
 
       <Footer onNavigate={handleNavigate} />

@@ -33,6 +33,8 @@ import {
   Pause,
   FileText,
   Copy,
+  Share2,
+  Sparkles,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -630,84 +632,147 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ---------------- USERS TAB ---------------- */}
+      {/* ---------------- USERS & REFERRAL NETWORK TAB ---------------- */}
       {activeTab === 'users' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold font-cinzel text-white">Church Members Directory</h2>
-              <p className="text-xs text-slate-400">Total registered members: {users.length}</p>
+        <div className="space-y-6">
+          {/* Referral System Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800">
+              <span className="text-slate-400 text-xs uppercase font-medium">Total Registered Members</span>
+              <div className="flex items-baseline justify-between mt-2">
+                <span className="text-3xl font-bold font-mono text-white">{users.length}</span>
+                <Users className="w-5 h-5 text-amber-400" />
+              </div>
+            </div>
+            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800">
+              <span className="text-slate-400 text-xs uppercase font-medium">Total Referral Connections</span>
+              <div className="flex items-baseline justify-between mt-2">
+                <span className="text-3xl font-bold font-mono text-emerald-400">
+                  {users.filter(u => u.sponsorId).length}
+                </span>
+                <Share2 className="w-5 h-5 text-emerald-400" />
+              </div>
+            </div>
+            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800">
+              <span className="text-slate-400 text-xs uppercase font-medium">Total Kingdom Points Awarded</span>
+              <div className="flex items-baseline justify-between mt-2">
+                <span className="text-3xl font-bold font-mono text-amber-300">
+                  {users.reduce((acc, u) => acc + (u.referralPoints || 0), 0)} pts
+                </span>
+                <Sparkles className="w-5 h-5 text-amber-300" />
+              </div>
+            </div>
+            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800">
+              <span className="text-slate-400 text-xs uppercase font-medium">Active Leaders</span>
+              <div className="flex items-baseline justify-between mt-2">
+                <span className="text-3xl font-bold font-mono text-cyan-400">
+                  {users.filter(u => u.role === 'admin').length}
+                </span>
+                <Shield className="w-5 h-5 text-cyan-400" />
+              </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="p-3">Member</th>
-                  <th className="p-3">Role</th>
-                  <th className="p-3">Referral Code</th>
-                  <th className="p-3">Points</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {users.map(u => (
-                  <tr key={u.id} className="hover:bg-slate-800/50">
-                    <td className="p-3">
-                      <div className="flex items-center gap-2.5">
-                        <img
-                          src={u.profilePhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
-                          alt={u.fullName}
-                          className="w-8 h-8 rounded-full object-cover border border-slate-700"
-                        />
-                        <div>
-                          <span className="font-bold text-white block">{u.fullName}</span>
-                          <span className="text-[11px] text-slate-400">{u.email}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          u.role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-300'
-                        }`}
-                      >
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="p-3 font-mono text-amber-400">{u.referralCode}</td>
-                    <td className="p-3 font-mono text-emerald-400">{u.referralPoints} pts</td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          u.status === 'active' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'
-                        }`}
-                      >
-                        {u.status}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right space-x-2">
-                      <button
-                        onClick={() => handleToggleUserRole(u)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px]"
-                      >
-                        Set as {u.role === 'admin' ? 'User' : 'Admin'}
-                      </button>
-                      <button
-                        onClick={() => handleToggleUserStatus(u)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] ${
-                          u.status === 'active' ? 'bg-rose-950 text-rose-300 hover:bg-rose-900' : 'bg-emerald-950 text-emerald-300 hover:bg-emerald-900'
-                        }`}
-                      >
-                        {u.status === 'active' ? 'Block' : 'Activate'}
-                      </button>
-                    </td>
+          {/* Members & Referral Network Table */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold font-cinzel text-white">Church Members & Referral Tree</h2>
+                <p className="text-xs text-slate-400">Track all members, sponsor IDs, referral downlines, and kingdom rewards</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400">Reward Rate: <strong className="text-amber-400">+50 Points</strong> / Referral</span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="p-3">Member</th>
+                    <th className="p-3">Role</th>
+                    <th className="p-3">Referral Code</th>
+                    <th className="p-3">Sponsor ID</th>
+                    <th className="p-3">Direct Invites</th>
+                    <th className="p-3">Kingdom Points</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {users.map(u => {
+                    const downlineCount = users.filter(sub => sub.sponsorId === u.memberId || sub.sponsorId === u.referralCode).length;
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-800/50">
+                        <td className="p-3">
+                          <div className="flex items-center gap-2.5">
+                            <img
+                              src={u.profilePhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
+                              alt={u.fullName}
+                              className="w-8 h-8 rounded-full object-cover border border-slate-700"
+                            />
+                            <div>
+                              <span className="font-bold text-white block">{u.fullName}</span>
+                              <span className="text-[11px] text-slate-400">{u.email} • {u.mobile}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              u.role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-300'
+                            }`}
+                          >
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="p-3 font-mono font-bold text-amber-400">{u.referralCode || u.memberId}</td>
+                        <td className="p-3 font-mono text-slate-400">
+                          {u.sponsorId ? (
+                            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[11px]">
+                              {u.sponsorId}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600 italic">Direct / Root</span>
+                          )}
+                        </td>
+                        <td className="p-3 font-mono text-cyan-400 font-bold">
+                          {downlineCount} souls
+                        </td>
+                        <td className="p-3 font-mono text-emerald-400 font-bold">
+                          {u.referralPoints || (downlineCount * 50)} pts
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              u.status === 'active' ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'
+                            }`}
+                          >
+                            {u.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right space-x-2">
+                          <button
+                            onClick={() => handleToggleUserRole(u)}
+                            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px]"
+                          >
+                            Set as {u.role === 'admin' ? 'User' : 'Admin'}
+                          </button>
+                          <button
+                            onClick={() => handleToggleUserStatus(u)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] ${
+                              u.status === 'active' ? 'bg-rose-950 text-rose-300 hover:bg-rose-900' : 'bg-emerald-950 text-emerald-300 hover:bg-emerald-900'
+                            }`}
+                          >
+                            {u.status === 'active' ? 'Block' : 'Activate'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

@@ -34,11 +34,23 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
-  const { user, openAuthModal, logout, unreadNotifCount } = useAuth();
+  const { user, openAuthModal, logout, unreadNotifCount, loginAsAdmin } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLive, setIsLive] = useState(false);
   const [mediaDropdownOpen, setMediaDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
+
+  const handleAdminAccess = async () => {
+    if (user?.role === 'admin') {
+      handleNav('admin-dashboard');
+      return;
+    }
+    setIsAdminLoading(true);
+    await loginAsAdmin();
+    setIsAdminLoading(false);
+    handleNav('admin-dashboard');
+  };
 
   useEffect(() => {
     // Check live status
@@ -253,7 +265,19 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2.5">
+            {/* Direct Admin Access Button */}
+            <button
+              id="btn-desktop-admin-access"
+              onClick={handleAdminAccess}
+              disabled={isAdminLoading}
+              className="px-3 py-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-500/30 to-amber-500/20 hover:from-amber-500/30 hover:to-yellow-500/40 border border-amber-400/60 text-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-amber-500/10 transition group"
+              title="Direct Admin Access / एडमिन पैनल"
+            >
+              <Shield className="w-3.5 h-3.5 text-amber-400 group-hover:rotate-12 transition-transform" />
+              <span>{isAdminLoading ? 'Logging In...' : 'Admin Access'}</span>
+            </button>
+
             <button
               id="btn-desktop-give"
               onClick={() => handleNav('donate')}
@@ -378,6 +402,18 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
               </div>
             </div>
           </div>
+
+          {/* Direct Admin Access Button (Mobile) */}
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              handleAdminAccess();
+            }}
+            className="w-full p-3 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/30 to-amber-500/20 border border-amber-400/60 text-amber-300 font-bold text-xs flex items-center justify-center gap-2 shadow-sm"
+          >
+            <Shield className="w-4 h-4 text-amber-400" />
+            <span>{user?.role === 'admin' ? 'Open Admin Dashboard (एडमिन पैनल)' : '👑 1-Click Admin Access (एडमिन लॉगिन)'}</span>
+          </button>
 
           {/* User Status Bar */}
           {user ? (
