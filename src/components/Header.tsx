@@ -141,6 +141,16 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
             </button>
 
             <button
+              id="nav-testimonies"
+              onClick={() => handleNav('testimonies')}
+              className={`px-3 py-2 rounded-lg transition ${
+                currentView === 'testimonies' ? 'text-amber-400 font-semibold bg-amber-500/10' : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              Testimonies
+            </button>
+
+            <button
               id="nav-sermons"
               onClick={() => handleNav('sermons')}
               className={`px-3 py-2 rounded-lg transition ${
@@ -178,6 +188,12 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
                     className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-amber-500/10 hover:text-amber-300 flex items-center gap-2"
                   >
                     <Video className="w-3.5 h-3.5" /> Video Library
+                  </button>
+                  <button
+                    onClick={() => handleNav('testimonies')}
+                    className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-amber-500/10 hover:text-amber-300 flex items-center gap-2"
+                  >
+                    <Heart className="w-3.5 h-3.5 text-amber-400" /> गवाही पुस्तिका (Testimonies)
                   </button>
                 </div>
               )}
@@ -507,6 +523,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
               { id: 'donate', label: 'Online Giving & Tithes' },
               { id: 'about', label: 'About Fire & Grace' },
               { id: 'bible', label: 'Holy Bible' },
+              { id: 'testimonies', label: 'गवाही पुस्तिका (Testimonies)' },
               { id: 'sermons', label: 'Sermons Library' },
               { id: 'photos', label: 'Photo Gallery' },
               { id: 'videos', label: 'Video Ministry' },

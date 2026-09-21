@@ -298,6 +298,34 @@ export interface BibleVerse {
   testament: 'Old' | 'New';
 }
 
+export interface BibleBook {
+  name: string;
+  hindiName: string;
+  testament: 'Old' | 'New';
+  chapters: number;
+  category: string;
+  categoryHindi: string;
+  order: number;
+}
+
+export interface TestimonyItem {
+  id: string;
+  title: string;
+  name: string;
+  city?: string;
+  category: 'Healing' | 'Deliverance' | 'Financial' | 'Family' | 'Salvation' | 'Miracle' | 'Other';
+  categoryHindi?: string;
+  content: string;
+  verse?: string;
+  imageUrl?: string;
+  audioUrl?: string;
+  videoUrl?: string;
+  amenCount: number;
+  date: string;
+  verified?: boolean;
+  featured?: boolean;
+}
+
 export interface BibleBookmark {
   id: string;
   userId: string;

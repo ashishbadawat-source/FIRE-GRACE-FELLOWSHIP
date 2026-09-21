@@ -15,9 +15,37 @@ import {
   Check,
   Flame,
   X,
+  Download,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '../services/api';
+import { downloadMediaFile } from '../utils/downloader';
 import type { Sermon } from '../types';
+
+function parseSermonVideo(url?: string): { type: 'youtube' | 'direct'; embedUrl: string; directUrl: string } {
+  if (!url) return { type: 'direct', embedUrl: '', directUrl: '' };
+  const clean = url.trim();
+  if (
+    clean.startsWith('data:video') ||
+    clean.startsWith('blob:') ||
+    clean.endsWith('.mp4') ||
+    clean.endsWith('.webm') ||
+    clean.includes('/api/files/')
+  ) {
+    return { type: 'direct', embedUrl: clean, directUrl: clean };
+  }
+  const ytMatch = clean.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/
+  );
+  if (ytMatch && ytMatch[1]) {
+    return {
+      type: 'youtube',
+      embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`,
+      directUrl: `https://www.youtube.com/watch?v=${ytMatch[1]}`,
+    };
+  }
+  return { type: 'direct', embedUrl: clean, directUrl: clean };
+}
 
 interface SermonsViewProps {
   onNavigateToBible?: (book: string) => void;
@@ -181,6 +209,15 @@ export const SermonsView: React.FC<SermonsViewProps> = ({ onNavigateToBible }) =
                     >
                       Watch Video
                     </button>
+                    {sermon.audioUrl && (
+                      <button
+                        onClick={() => downloadMediaFile(sermon.audioUrl!, `${sermon.title} - Sermon Audio.mp3`)}
+                        className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 transition"
+                        title="प्रवचन ऑडियो डाउनलोड करें (Download Audio MP3)"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => setIsPlayingAudio(isPlayingAudio === sermon.id ? null : sermon.id)}
                       className={`p-2 rounded-lg transition ${
@@ -188,7 +225,7 @@ export const SermonsView: React.FC<SermonsViewProps> = ({ onNavigateToBible }) =
                           ? 'bg-amber-500 text-slate-950 font-bold'
                           : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
                       }`}
-                      title="Audio Stream"
+                      title="Audio Player"
                     >
                       <Volume2 className="w-4 h-4" />
                     </button>
@@ -207,16 +244,27 @@ export const SermonsView: React.FC<SermonsViewProps> = ({ onNavigateToBible }) =
                   </button>
                 </div>
 
-                {/* Simulated Audio Player if active */}
+                {/* Audio Player if active */}
                 {isPlayingAudio === sermon.id && (
                   <div className="mt-2 p-3 rounded-xl bg-slate-950 border border-amber-500/30 space-y-2 animate-fadeIn">
                     <div className="flex items-center justify-between text-[11px] text-amber-300">
                       <span>Streaming Audio Broadcast...</span>
-                      <span className="font-mono">18:42 / 48:15</span>
+                      {sermon.audioUrl && (
+                        <button
+                          onClick={() => downloadMediaFile(sermon.audioUrl!, `${sermon.title}.mp3`)}
+                          className="hover:underline flex items-center gap-1 text-[10px] text-slate-400 hover:text-amber-300"
+                        >
+                          <Download className="w-3 h-3" /> डाउनलोड MP3
+                        </button>
+                      )}
                     </div>
-                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-amber-500 h-full w-2/5 rounded-full"></div>
-                    </div>
+                    {sermon.audioUrl ? (
+                      <audio src={sermon.audioUrl} controls autoPlay className="w-full h-8" />
+                    ) : (
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div className="bg-amber-500 h-full w-2/5 rounded-full animate-pulse"></div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -226,62 +274,95 @@ export const SermonsView: React.FC<SermonsViewProps> = ({ onNavigateToBible }) =
       )}
 
       {/* Video Modal */}
-      {activeSermon && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-          <div className="w-full max-w-4xl rounded-2xl bg-slate-900 border border-amber-500/30 shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-              <div>
-                <h4 className="font-bold text-white text-base">{activeSermon.title}</h4>
-                <p className="text-xs text-amber-400">
-                  {activeSermon.speaker} • {activeSermon.bibleReference}
-                </p>
-              </div>
-              <button
-                onClick={() => setActiveSermon(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="aspect-video bg-black">
-              {activeSermon.youtubeUrl ? (
-                <iframe
-                  src={activeSermon.youtubeUrl}
-                  title={activeSermon.title}
-                  className="w-full h-full border-0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center">
-                  <Play className="w-12 h-12 text-amber-400 mb-2" />
-                  <p className="text-sm font-semibold text-white">Full Video Stream</p>
-                  <p className="text-xs mt-1">Available in Church Vault.</p>
+      {activeSermon && (() => {
+        const parsed = parseSermonVideo(activeSermon.youtubeUrl);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+            <div className="w-full max-w-4xl rounded-2xl bg-slate-900 border border-amber-500/30 shadow-2xl overflow-hidden flex flex-col">
+              <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-white text-base">{activeSermon.title}</h4>
+                  <p className="text-xs text-amber-400">
+                    {activeSermon.speaker} • {activeSermon.bibleReference}
+                  </p>
                 </div>
-              )}
-            </div>
-
-            <div className="p-5 text-xs text-slate-300 space-y-3">
-              <p className="leading-relaxed">{activeSermon.description}</p>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => handleShare(activeSermon)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs flex items-center gap-1.5"
-                >
-                  <Share2 className="w-3.5 h-3.5" /> Share
-                </button>
                 <button
                   onClick={() => setActiveSermon(null)}
-                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800"
                 >
-                  Done
+                  <X className="w-5 h-5" />
                 </button>
+              </div>
+
+              <div className="aspect-video bg-black">
+                {activeSermon.youtubeUrl ? (
+                  parsed.type === 'youtube' ? (
+                    <iframe
+                      src={parsed.embedUrl}
+                      title={activeSermon.title}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
+                  ) : (
+                    <video
+                      src={parsed.directUrl}
+                      controls
+                      autoPlay
+                      className="w-full h-full object-contain"
+                    />
+                  )
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+                    <Play className="w-12 h-12 text-amber-400 mb-2" />
+                    <p className="text-sm font-semibold text-white">Full Video Stream</p>
+                    <p className="text-xs mt-1">Available in Church Vault.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-5 text-xs text-slate-300 space-y-3">
+                <p className="leading-relaxed">{activeSermon.description}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex items-center gap-2">
+                    {activeSermon.youtubeUrl && (
+                      <button
+                        onClick={() => downloadMediaFile(parsed.type === 'direct' ? parsed.directUrl : activeSermon.youtubeUrl, `${activeSermon.title}.mp4`)}
+                        className="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-semibold text-xs flex items-center gap-1.5 border border-amber-500/30"
+                      >
+                        <Download className="w-3.5 h-3.5" /> वीडियो डाउनलोड करें
+                      </button>
+                    )}
+                    {activeSermon.audioUrl && (
+                      <button
+                        onClick={() => downloadMediaFile(activeSermon.audioUrl!, `${activeSermon.title} - Audio.mp3`)}
+                        className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center gap-1.5 border border-slate-700"
+                      >
+                        <Download className="w-3.5 h-3.5 text-amber-400" /> ऑडियो MP3
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleShare(activeSermon)}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs flex items-center gap-1.5"
+                    >
+                      <Share2 className="w-3.5 h-3.5" /> Share
+                    </button>
+                    <button
+                      onClick={() => setActiveSermon(null)}
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

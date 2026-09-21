@@ -29,6 +29,7 @@ import type {
   BibleBookmark,
   DonationRecord,
   ChurchPaymentDetails,
+  TestimonyItem,
 } from '../src/types';
 
 interface StoredUser extends UserProfile {
@@ -60,6 +61,7 @@ interface DatabaseSchema {
   donations: DonationRecord[];
   paymentDetails: ChurchPaymentDetails;
   uploadedFiles: any[];
+  testimonies: TestimonyItem[];
 }
 
 const DB_PATH = path.resolve(process.cwd(), 'database.json');
@@ -1113,6 +1115,98 @@ Jesus Christ, my living hope!`,
         description: 'Main altar and worship stage photography',
       },
     ],
+    testimonies: [
+      {
+        id: 'test_001',
+        title: 'असाध्य कैंसर से प्रभु यीशु ने दी पूर्ण चंगाई',
+        name: 'बहन सुनीता मसीह (Sister Sunita Masih)',
+        city: 'नई दिल्ली (New Delhi)',
+        category: 'Healing',
+        categoryHindi: 'चमत्कारी चंगाई',
+        verse: 'उसके कोड़े खाने से हम चंगे हो चुके हैं। (यशायाह 53:5)',
+        content: 'मुझे 2024 में स्टेज-3 कैंसर डायग्नोस हुआ था। डॉक्टर ने सर्जरी और कीमोथेरेपी के बाद भी उम्मीद छोड़ दी थी। चर्च की शुक्रवार की उपवास व चंगाई प्रार्थना में पास्टर जी ने मेरे सिर पर हाथ रखकर प्रार्थना की। अगले महीने जब एम्स अस्पताल में जांच हुई, तो सभी रिपोर्ट्स पूरी तरह नॉर्मल आई! डॉक्टर भी हैरान रह गए। यीशु मसीह के पवित्र नाम की महिमा हो!',
+        amenCount: 148,
+        date: '2026-09-15T10:00:00.000Z',
+        verified: true,
+        featured: true,
+        imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600&auto=format&fit=crop&q=80',
+      },
+      {
+        id: 'test_002',
+        title: '5 लाख का कर्ज समाप्त हुआ और सरकारी नौकरी मिली',
+        name: 'भाई राहुल शर्मा (Brother Rahul Sharma)',
+        city: 'लखनऊ, उत्तर प्रदेश (Lucknow, UP)',
+        category: 'Financial',
+        categoryHindi: 'आर्थिक आशीष',
+        verse: 'मेरा परमेश्वर भी अपने उस धन के अनुसार जो महिमा सहित मसीह यीशु में है, तुम्हारी हर एक घटी को पूरी करेगा। (फिलिप्पियों 4:19)',
+        content: 'पिछले दो साल से हमारा व्यापार ठप्प हो गया था और 5 लाख का भारी कर्ज सिर पर था। मैंने चर्च में दशमांश देना शुरू किया और प्रभु पर पूरा भरोसा रखा। प्रभु ने अद्भुत मार्ग खोला, अप्रत्याशित रूप से फंसा हुआ पैसा वापस मिला, पूरा कर्ज चुकता हुआ और मुझे राज्य सरकार में अधिकारी पद पर नौकरी मिली।',
+        amenCount: 104,
+        date: '2026-09-12T14:30:00.000Z',
+        verified: true,
+        featured: true,
+        imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80',
+      },
+      {
+        id: 'test_003',
+        title: '8 वर्षों का नशा और डिप्रेशन यीशु के नाम से टूटा',
+        name: 'भाई रोहन पॉल (Brother Rohan Paul)',
+        city: 'मुंबई (Mumbai, Maharashtra)',
+        category: 'Deliverance',
+        categoryHindi: 'बंधनों से छुटकारा',
+        verse: 'यदि पुत्र तुम्हें स्वतंत्र करेगा, तो सचमुच तुम स्वतंत्र हो जाओगे। (यूहन्ना 8:36)',
+        content: 'कॉलेज के समय से मैं शराब और नशीली दवाओं का गुलाम था। परिवार बिखरने के कगार पर था। एक दिन दोस्त मुझे फायर ग्रेस फेलोशिप की रिवाइवल मीटिंग में ले गया। जब वेदी पर प्रार्थना हुई, मुझे लगा जैसे कोई भारी बोझ मेरी छाती से उतर गया। उस दिन के बाद से मैंने कभी नशे को हाथ नहीं लगाया। आज मैं प्रभु की सेवा कर रहा हूँ।',
+        amenCount: 119,
+        date: '2026-09-10T11:00:00.000Z',
+        verified: true,
+        featured: true,
+        imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&auto=format&fit=crop&q=80',
+      },
+      {
+        id: 'test_004',
+        title: 'तलाक के कगार पर था परिवार, प्रार्थना से मिला नया जीवन',
+        name: 'श्रीमती अनीता और प्रकाश जोसेफ (Anita & Prakash Joseph)',
+        city: 'भोपाल (Bhopal, MP)',
+        category: 'Family',
+        categoryHindi: 'पारिवारिक मिलाप',
+        verse: 'परमेश्वर जिसे एक संग जोड़े, उसे मनुष्य अलग न करे। (मत्ती 19:6)',
+        content: 'हमारे बीच तलाक का केस अदालत में चल रहा था। 3 साल से हम अलग रह रहे थे। जब हमने चर्च की काउंसलिंग और प्रार्थना में भाग लिया, तो पवित्र आत्मा ने हमारे दिलों को पिघला दिया। पुरानी कड़वाहट और क्षमा न करने की भावना दूर हुई। आज हम अपने दोनों बच्चों के साथ खुशी-खुशी प्रभु की आराधना कर रहे हैं।',
+        amenCount: 92,
+        date: '2026-09-08T16:15:00.000Z',
+        verified: true,
+        featured: true,
+        imageUrl: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=600&auto=format&fit=crop&q=80',
+      },
+      {
+        id: 'test_005',
+        title: '7 साल बाद प्रभु ने दिया संतान का वरदान (Miracle Child)',
+        name: 'प्रिया और डेविड कुमार (Priya & David Kumar)',
+        city: 'चंडीगढ़ (Chandigarh)',
+        category: 'Miracle',
+        categoryHindi: 'अद्भुत चमत्कार',
+        verse: 'उसने बाँझ को घर में बसाया और बाल-बच्चों की आनन्दित माता बनाया। यहोवा की स्तुति करो! (भजन 113:9)',
+        content: 'शादी के 7 साल तक हमारे कोई संतान नहीं थी। सारे मेडिकल ट्रीटमेंट फेल हो चुके थे। चर्च के एनुअल कन्वेंशन में पास्टर जी ने भविष्यवाणी की थी कि अगले साल इसी महीने आपकी गोद भरी होगी। प्रभु ने अपनी प्रतिज्ञा पूरी की और आज हमारे पास एक सुंदर स्वस्थ बेटा इमैनुएल है!',
+        amenCount: 172,
+        date: '2026-09-05T09:45:00.000Z',
+        verified: true,
+        featured: true,
+        imageUrl: 'https://images.unsplash.com/photo-1543332164-6e82f355badc?w=600&auto=format&fit=crop&q=80',
+      },
+      {
+        id: 'test_006',
+        title: 'अंधेरे और निराशा से उद्धार: प्रभु यीशु बने मेरा जीवन',
+        name: 'सिस्टर अंजलि वर्मा (Sister Anjali Verma)',
+        city: 'जयपुर (Jaipur, Rajasthan)',
+        category: 'Salvation',
+        categoryHindi: 'उद्धार व नया जीवन',
+        verse: 'मार्ग और सत्य और जीवन मैं ही हूँ; बिना मेरे द्वारा कोई पिता के पास नहीं पहुँच सकता। (यूहन्ना 14:6)',
+        content: 'मैं जीवन में अत्यंत निराशा, अकेलेपन और आत्महत्या के विचारों से जूझ रही थी। मुझे कहीं शांति नहीं मिल रही थी। यूट्यूब पर चर्च का लाइव प्रसारण देखा और प्रभु यीशु का प्रेम मेरे हृदय में उतर आया। मैंने प्रभु को ग्रहण किया और अब मेरे जीवन में वह अलौकिक शांति है जो सांसारिक समझ से परे है।',
+        amenCount: 136,
+        date: '2026-09-02T13:20:00.000Z',
+        verified: true,
+        featured: true,
+        imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80',
+      },
+    ],
   };
 }
 
@@ -1140,6 +1234,9 @@ class Database {
         }
         if (!parsed.uploadedFiles) {
           parsed.uploadedFiles = initial.uploadedFiles;
+        }
+        if (!parsed.testimonies || parsed.testimonies.length === 0) {
+          parsed.testimonies = initial.testimonies;
         }
         // Ensure default leadership accounts (Ashish, Aniket, Admin, Grace, Joshua) are present
         if (!parsed.users || parsed.users.length === 0) {
@@ -1210,6 +1307,7 @@ class Database {
       contactMessages: [],
       notifications: [],
       bibleBookmarks: [],
+      testimonies: [],
     };
     this.save();
     return this.data;

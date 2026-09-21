@@ -27,6 +27,8 @@ import type {
   BibleBookmark,
   DonationRecord,
   ChurchPaymentDetails,
+  TestimonyItem,
+  BibleBook,
 } from '../types';
 
 const BASE_URL = '';
@@ -543,7 +545,7 @@ export const api = {
 
   // Bible
   getBibleBooks: () =>
-    fetch(`${BASE_URL}/api/bible/books`).then(r => handleResponse<{ books: any[] }>(r)),
+    fetch(`${BASE_URL}/api/bible/books`).then(r => handleResponse<{ books: BibleBook[] }>(r)),
 
   getBibleChapter: (book: string, chapter: number) =>
     fetch(`${BASE_URL}/api/bible/chapter?book=${encodeURIComponent(book)}&chapter=${chapter}`).then(r =>
@@ -574,6 +576,41 @@ export const api = {
 
   deleteBibleBookmark: (id: string) =>
     fetch(`${BASE_URL}/api/bible/bookmarks/${id}`, {
+      method: 'DELETE',
+      headers: { ...getAuthHeader() },
+    }).then(r => handleResponse<{ message: string }>(r)),
+
+  // Testimonies (गवाही पुस्तिका)
+  getTestimonies: (category?: string, search?: string) => {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (search) params.append('search', search);
+    return fetch(`${BASE_URL}/api/testimonies?${params.toString()}`).then(r =>
+      handleResponse<{ testimonies: TestimonyItem[] }>(r)
+    );
+  },
+
+  submitTestimony: (testimony: Partial<TestimonyItem>) =>
+    fetch(`${BASE_URL}/api/testimonies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(testimony),
+    }).then(r => handleResponse<{ message: string; testimony: TestimonyItem }>(r)),
+
+  amenTestimony: (id: string) =>
+    fetch(`${BASE_URL}/api/testimonies/${id}/amen`, {
+      method: 'POST',
+    }).then(r => handleResponse<{ success: boolean; amenCount: number; testimony: TestimonyItem }>(r)),
+
+  updateAdminTestimony: (id: string, updates: Partial<TestimonyItem>) =>
+    fetch(`${BASE_URL}/api/admin/testimonies/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify(updates),
+    }).then(r => handleResponse<{ message: string; testimony: TestimonyItem }>(r)),
+
+  deleteAdminTestimony: (id: string) =>
+    fetch(`${BASE_URL}/api/admin/testimonies/${id}`, {
       method: 'DELETE',
       headers: { ...getAuthHeader() },
     }).then(r => handleResponse<{ message: string }>(r)),

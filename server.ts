@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { db, hashPassword, verifyPassword, generateMemberId } from './server/db';
 import { BIBLE_BOOKS, FAMOUS_VERSES, getChapterVerses, searchBible } from './server/bibleData';
-import type { UserProfile } from './src/types';
+import type { UserProfile, TestimonyItem } from './src/types';
 
 const app = express();
 const PORT = 3000;
@@ -1002,6 +1002,62 @@ app.delete('/api/admin/files/:id', adminRequired, (req, res) => {
   res.json({ message: 'File removed from repository.' });
 });
 
+// Universal download proxy endpoint to force file downloading for cross-origin MP3, MP4, and media
+app.get('/api/download', async (req, res) => {
+  const fileUrl = req.query.url as string;
+  let filename = (req.query.filename as string) || 'download';
+  if (!fileUrl) {
+    res.status(400).send('URL query parameter is required');
+    return;
+  }
+
+  // Ensure correct extension
+  if (!filename.includes('.')) {
+    if (fileUrl.includes('.mp3')) filename += '.mp3';
+    else if (fileUrl.includes('.mp4')) filename += '.mp4';
+    else if (fileUrl.includes('.webm')) filename += '.webm';
+    else if (fileUrl.includes('.jpg') || fileUrl.includes('.jpeg')) filename += '.jpg';
+    else if (fileUrl.includes('.png')) filename += '.png';
+    else filename += '.mp3';
+  }
+
+  try {
+    // If it's a data URI (base64)
+    if (fileUrl.startsWith('data:')) {
+      const parts = fileUrl.split(',');
+      const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+      const buffer = Buffer.from(parts[1], 'base64');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Content-Length', buffer.length);
+      res.send(buffer);
+      return;
+    }
+
+    const targetUrl = fileUrl.startsWith('/') ? `http://localhost:3000${fileUrl}` : fileUrl;
+    const response = await fetch(targetUrl);
+    if (!response.ok) {
+      res.redirect(fileUrl);
+      return;
+    }
+
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const contentLength = response.headers.get('content-length');
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.setHeader('Content-Type', contentType);
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    res.send(Buffer.from(arrayBuffer));
+  } catch (err: any) {
+    console.error('Download proxy error:', err);
+    res.redirect(fileUrl);
+  }
+});
+
 // -------------------------------------------------------------------------
 // 7. LIVE STREAMING
 // -------------------------------------------------------------------------
@@ -1522,6 +1578,102 @@ app.delete('/api/bible/bookmarks/:id', authRequired, (req, res) => {
   data.bibleBookmarks = data.bibleBookmarks.filter(b => !(b.id === req.params.id && b.userId === user.id));
   db.save();
   res.json({ message: 'Bookmark removed.' });
+});
+
+// -------------------------------------------------------------------------
+// 14C. TESTIMONIES / गवाही पुस्तिका
+// -------------------------------------------------------------------------
+
+app.get('/api/testimonies', (req, res) => {
+  const data = db.getData();
+  if (!data.testimonies) data.testimonies = [];
+  const { category, search } = req.query;
+
+  let list = [...data.testimonies];
+  if (category && category !== 'All' && category !== 'सभी') {
+    list = list.filter(t => t.category === category || t.categoryHindi === category);
+  }
+  if (search) {
+    const q = (search as string).toLowerCase().trim();
+    list = list.filter(t =>
+      t.title.toLowerCase().includes(q) ||
+      t.name.toLowerCase().includes(q) ||
+      t.content.toLowerCase().includes(q) ||
+      (t.city && t.city.toLowerCase().includes(q)) ||
+      (t.verse && t.verse.toLowerCase().includes(q))
+    );
+  }
+
+  res.json({ testimonies: list });
+});
+
+app.post('/api/testimonies', (req, res) => {
+  const { title, name, city, category, categoryHindi, content, verse, imageUrl } = req.body;
+  if (!title || !name || !content) {
+    res.status(400).json({ error: 'शीर्षक, नाम और गवाही का विवरण आवश्यक है (Title, name, and testimony details are required).' });
+    return;
+  }
+
+  const data = db.getData();
+  if (!data.testimonies) data.testimonies = [];
+
+  const newTestimony: TestimonyItem = {
+    id: `test_${Date.now()}`,
+    title: title.trim(),
+    name: name.trim(),
+    city: city ? city.trim() : undefined,
+    category: category || 'Miracle',
+    categoryHindi: categoryHindi || 'अद्भुत चमत्कार',
+    content: content.trim(),
+    verse: verse ? verse.trim() : undefined,
+    imageUrl: imageUrl ? imageUrl.trim() : undefined,
+    amenCount: 1,
+    date: new Date().toISOString(),
+    verified: true,
+    featured: false,
+  };
+
+  data.testimonies.unshift(newTestimony);
+  db.save();
+
+  res.status(201).json({
+    message: 'आपकी गवाही सफलतापूर्वक दर्ज कर ली गई है! प्रभु यीशु आपके विश्वास को और बढ़ाए।',
+    testimony: newTestimony,
+  });
+});
+
+app.post('/api/testimonies/:id/amen', (req, res) => {
+  const data = db.getData();
+  if (!data.testimonies) data.testimonies = [];
+  const item = data.testimonies.find(t => t.id === req.params.id);
+  if (!item) {
+    res.status(404).json({ error: 'Testimony not found' });
+    return;
+  }
+  item.amenCount = (item.amenCount || 0) + 1;
+  db.save();
+  res.json({ success: true, amenCount: item.amenCount, testimony: item });
+});
+
+app.put('/api/admin/testimonies/:id', adminRequired, (req, res) => {
+  const data = db.getData();
+  if (!data.testimonies) data.testimonies = [];
+  const item = data.testimonies.find(t => t.id === req.params.id);
+  if (!item) {
+    res.status(404).json({ error: 'Testimony not found' });
+    return;
+  }
+  Object.assign(item, req.body);
+  db.save();
+  res.json({ message: 'Testimony updated successfully', testimony: item });
+});
+
+app.delete('/api/admin/testimonies/:id', adminRequired, (req, res) => {
+  const data = db.getData();
+  if (!data.testimonies) data.testimonies = [];
+  data.testimonies = data.testimonies.filter(t => t.id !== req.params.id);
+  db.save();
+  res.json({ message: 'Testimony removed from database' });
 });
 
 // -------------------------------------------------------------------------

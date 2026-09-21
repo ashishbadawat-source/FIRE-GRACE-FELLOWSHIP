@@ -5,81 +5,84 @@
 
 export interface BookMeta {
   name: string;
+  hindiName: string;
   testament: 'Old' | 'New';
   chapters: number;
   category: string;
+  categoryHindi: string;
+  order: number;
 }
 
 export const BIBLE_BOOKS: BookMeta[] = [
-  // Old Testament (39)
-  { name: 'Genesis', testament: 'Old', chapters: 50, category: 'Pentateuch' },
-  { name: 'Exodus', testament: 'Old', chapters: 40, category: 'Pentateuch' },
-  { name: 'Leviticus', testament: 'Old', chapters: 27, category: 'Pentateuch' },
-  { name: 'Numbers', testament: 'Old', chapters: 36, category: 'Pentateuch' },
-  { name: 'Deuteronomy', testament: 'Old', chapters: 34, category: 'Pentateuch' },
-  { name: 'Joshua', testament: 'Old', chapters: 24, category: 'Historical' },
-  { name: 'Judges', testament: 'Old', chapters: 21, category: 'Historical' },
-  { name: 'Ruth', testament: 'Old', chapters: 4, category: 'Historical' },
-  { name: '1 Samuel', testament: 'Old', chapters: 31, category: 'Historical' },
-  { name: '2 Samuel', testament: 'Old', chapters: 24, category: 'Historical' },
-  { name: '1 Kings', testament: 'Old', chapters: 22, category: 'Historical' },
-  { name: '2 Kings', testament: 'Old', chapters: 25, category: 'Historical' },
-  { name: '1 Chronicles', testament: 'Old', chapters: 29, category: 'Historical' },
-  { name: '2 Chronicles', testament: 'Old', chapters: 36, category: 'Historical' },
-  { name: 'Ezra', testament: 'Old', chapters: 10, category: 'Historical' },
-  { name: 'Nehemiah', testament: 'Old', chapters: 13, category: 'Historical' },
-  { name: 'Esther', testament: 'Old', chapters: 10, category: 'Historical' },
-  { name: 'Job', testament: 'Old', chapters: 42, category: 'Poetry' },
-  { name: 'Psalms', testament: 'Old', chapters: 150, category: 'Poetry' },
-  { name: 'Proverbs', testament: 'Old', chapters: 31, category: 'Poetry' },
-  { name: 'Ecclesiastes', testament: 'Old', chapters: 12, category: 'Poetry' },
-  { name: 'Song of Solomon', testament: 'Old', chapters: 8, category: 'Poetry' },
-  { name: 'Isaiah', testament: 'Old', chapters: 66, category: 'Major Prophets' },
-  { name: 'Jeremiah', testament: 'Old', chapters: 52, category: 'Major Prophets' },
-  { name: 'Lamentations', testament: 'Old', chapters: 5, category: 'Major Prophets' },
-  { name: 'Ezekiel', testament: 'Old', chapters: 48, category: 'Major Prophets' },
-  { name: 'Daniel', testament: 'Old', chapters: 12, category: 'Major Prophets' },
-  { name: 'Hosea', testament: 'Old', chapters: 14, category: 'Minor Prophets' },
-  { name: 'Joel', testament: 'Old', chapters: 3, category: 'Minor Prophets' },
-  { name: 'Amos', testament: 'Old', chapters: 9, category: 'Minor Prophets' },
-  { name: 'Obadiah', testament: 'Old', chapters: 1, category: 'Minor Prophets' },
-  { name: 'Jonah', testament: 'Old', chapters: 4, category: 'Minor Prophets' },
-  { name: 'Micah', testament: 'Old', chapters: 7, category: 'Minor Prophets' },
-  { name: 'Nahum', testament: 'Old', chapters: 3, category: 'Minor Prophets' },
-  { name: 'Habakkuk', testament: 'Old', chapters: 3, category: 'Minor Prophets' },
-  { name: 'Zephaniah', testament: 'Old', chapters: 3, category: 'Minor Prophets' },
-  { name: 'Haggai', testament: 'Old', chapters: 2, category: 'Minor Prophets' },
-  { name: 'Zechariah', testament: 'Old', chapters: 14, category: 'Minor Prophets' },
-  { name: 'Malachi', testament: 'Old', chapters: 4, category: 'Minor Prophets' },
+  // Old Testament (पुराना नियम - 39 पुस्तकें)
+  { order: 1, name: 'Genesis', hindiName: 'उत्पत्ति', testament: 'Old', chapters: 50, category: 'Pentateuch', categoryHindi: 'व्यवस्था' },
+  { order: 2, name: 'Exodus', hindiName: 'निर्गमन', testament: 'Old', chapters: 40, category: 'Pentateuch', categoryHindi: 'व्यवस्था' },
+  { order: 3, name: 'Leviticus', hindiName: 'लैव्यव्यवस्था', testament: 'Old', chapters: 27, category: 'Pentateuch', categoryHindi: 'व्यवस्था' },
+  { order: 4, name: 'Numbers', hindiName: 'गिनती', testament: 'Old', chapters: 36, category: 'Pentateuch', categoryHindi: 'व्यवस्था' },
+  { order: 5, name: 'Deuteronomy', hindiName: 'व्यवस्थाविवरण', testament: 'Old', chapters: 34, category: 'Pentateuch', categoryHindi: 'व्यवस्था' },
+  { order: 6, name: 'Joshua', hindiName: 'यहोशू', testament: 'Old', chapters: 24, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 7, name: 'Judges', hindiName: 'न्यायियों', testament: 'Old', chapters: 21, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 8, name: 'Ruth', hindiName: 'रूत', testament: 'Old', chapters: 4, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 9, name: '1 Samuel', hindiName: '1 शमूएल', testament: 'Old', chapters: 31, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 10, name: '2 Samuel', hindiName: '2 शमूएल', testament: 'Old', chapters: 24, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 11, name: '1 Kings', hindiName: '1 राजा', testament: 'Old', chapters: 22, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 12, name: '2 Kings', hindiName: '2 राजा', testament: 'Old', chapters: 25, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 13, name: '1 Chronicles', hindiName: '1 इतिहास', testament: 'Old', chapters: 29, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 14, name: '2 Chronicles', hindiName: '2 इतिहास', testament: 'Old', chapters: 36, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 15, name: 'Ezra', hindiName: 'एज्रा', testament: 'Old', chapters: 10, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 16, name: 'Nehemiah', hindiName: 'नहेमायाह', testament: 'Old', chapters: 13, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 17, name: 'Esther', hindiName: 'एस्तेर', testament: 'Old', chapters: 10, category: 'Historical', categoryHindi: 'इतिहास' },
+  { order: 18, name: 'Job', hindiName: 'अय्यूब', testament: 'Old', chapters: 42, category: 'Poetry', categoryHindi: 'काव्य एवं ज्ञान' },
+  { order: 19, name: 'Psalms', hindiName: 'भजन संहिता', testament: 'Old', chapters: 150, category: 'Poetry', categoryHindi: 'काव्य एवं स्तुति' },
+  { order: 20, name: 'Proverbs', hindiName: 'नीतिवचन', testament: 'Old', chapters: 31, category: 'Poetry', categoryHindi: 'बुद्धिमानी' },
+  { order: 21, name: 'Ecclesiastes', hindiName: 'सभोपदेशक', testament: 'Old', chapters: 12, category: 'Poetry', categoryHindi: 'ज्ञान' },
+  { order: 22, name: 'Song of Solomon', hindiName: 'श्रेष्ठगीत', testament: 'Old', chapters: 8, category: 'Poetry', categoryHindi: 'काव्य' },
+  { order: 23, name: 'Isaiah', hindiName: 'यशायाह', testament: 'Old', chapters: 66, category: 'Major Prophets', categoryHindi: 'प्रमुख भविष्यद्वक्ता' },
+  { order: 24, name: 'Jeremiah', hindiName: 'यिर्मयाह', testament: 'Old', chapters: 52, category: 'Major Prophets', categoryHindi: 'प्रमुख भविष्यद्वक्ता' },
+  { order: 25, name: 'Lamentations', hindiName: 'विलापगीत', testament: 'Old', chapters: 5, category: 'Major Prophets', categoryHindi: 'प्रमुख भविष्यद्वक्ता' },
+  { order: 26, name: 'Ezekiel', hindiName: 'यहेजकेल', testament: 'Old', chapters: 48, category: 'Major Prophets', categoryHindi: 'प्रमुख भविष्यद्वक्ता' },
+  { order: 27, name: 'Daniel', hindiName: 'दानिय्येल', testament: 'Old', chapters: 12, category: 'Major Prophets', categoryHindi: 'प्रमुख भविष्यद्वक्ता' },
+  { order: 28, name: 'Hosea', hindiName: 'होशे', testament: 'Old', chapters: 14, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 29, name: 'Joel', hindiName: 'योएल', testament: 'Old', chapters: 3, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 30, name: 'Amos', hindiName: 'आमोस', testament: 'Old', chapters: 9, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 31, name: 'Obadiah', hindiName: 'ओबद्याह', testament: 'Old', chapters: 1, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 32, name: 'Jonah', hindiName: 'योना', testament: 'Old', chapters: 4, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 33, name: 'Micah', hindiName: 'मीका', testament: 'Old', chapters: 7, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 34, name: 'Nahum', hindiName: 'नहूम', testament: 'Old', chapters: 3, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 35, name: 'Habakkuk', hindiName: 'हबक्कूक', testament: 'Old', chapters: 3, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 36, name: 'Zephaniah', hindiName: 'सपोन्याह', testament: 'Old', chapters: 3, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 37, name: 'Haggai', hindiName: 'हाग्गै', testament: 'Old', chapters: 2, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 38, name: 'Zechariah', hindiName: 'जकर्याह', testament: 'Old', chapters: 14, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
+  { order: 39, name: 'Malachi', hindiName: 'मलाकी', testament: 'Old', chapters: 4, category: 'Minor Prophets', categoryHindi: 'लघु भविष्यद्वक्ता' },
 
-  // New Testament (27)
-  { name: 'Matthew', testament: 'New', chapters: 28, category: 'Gospels' },
-  { name: 'Mark', testament: 'New', chapters: 16, category: 'Gospels' },
-  { name: 'Luke', testament: 'New', chapters: 24, category: 'Gospels' },
-  { name: 'John', testament: 'New', chapters: 21, category: 'Gospels' },
-  { name: 'Acts', testament: 'New', chapters: 28, category: 'History' },
-  { name: 'Romans', testament: 'New', chapters: 16, category: 'Epistles' },
-  { name: '1 Corinthians', testament: 'New', chapters: 16, category: 'Epistles' },
-  { name: '2 Corinthians', testament: 'New', chapters: 13, category: 'Epistles' },
-  { name: 'Galatians', testament: 'New', chapters: 6, category: 'Epistles' },
-  { name: 'Ephesians', testament: 'New', chapters: 6, category: 'Epistles' },
-  { name: 'Philippians', testament: 'New', chapters: 4, category: 'Epistles' },
-  { name: 'Colossians', testament: 'New', chapters: 4, category: 'Epistles' },
-  { name: '1 Thessalonians', testament: 'New', chapters: 5, category: 'Epistles' },
-  { name: '2 Thessalonians', testament: 'New', chapters: 3, category: 'Epistles' },
-  { name: '1 Timothy', testament: 'New', chapters: 6, category: 'Epistles' },
-  { name: '2 Timothy', testament: 'New', chapters: 4, category: 'Epistles' },
-  { name: 'Titus', testament: 'New', chapters: 3, category: 'Epistles' },
-  { name: 'Philemon', testament: 'New', chapters: 1, category: 'Epistles' },
-  { name: 'Hebrews', testament: 'New', chapters: 13, category: 'Epistles' },
-  { name: 'James', testament: 'New', chapters: 5, category: 'Epistles' },
-  { name: '1 Peter', testament: 'New', chapters: 5, category: 'Epistles' },
-  { name: '2 Peter', testament: 'New', chapters: 3, category: 'Epistles' },
-  { name: '1 John', testament: 'New', chapters: 5, category: 'Epistles' },
-  { name: '2 John', testament: 'New', chapters: 1, category: 'Epistles' },
-  { name: '3 John', testament: 'New', chapters: 1, category: 'Epistles' },
-  { name: 'Jude', testament: 'New', chapters: 1, category: 'Epistles' },
-  { name: 'Revelation', testament: 'New', chapters: 22, category: 'Prophecy' },
+  // New Testament (नया नियम - 27 पुस्तकें)
+  { order: 40, name: 'Matthew', hindiName: 'मत्ती', testament: 'New', chapters: 28, category: 'Gospels', categoryHindi: 'सुसमाचार' },
+  { order: 41, name: 'Mark', hindiName: 'मरकुस', testament: 'New', chapters: 16, category: 'Gospels', categoryHindi: 'सुसमाचार' },
+  { order: 42, name: 'Luke', hindiName: 'लूका', testament: 'New', chapters: 24, category: 'Gospels', categoryHindi: 'सुसमाचार' },
+  { order: 43, name: 'John', hindiName: 'यूहन्ना', testament: 'New', chapters: 21, category: 'Gospels', categoryHindi: 'सुसमाचार' },
+  { order: 44, name: 'Acts', hindiName: 'प्रेरितों के काम', testament: 'New', chapters: 28, category: 'History', categoryHindi: 'कलीसिया का इतिहास' },
+  { order: 45, name: 'Romans', hindiName: 'रोमियों', testament: 'New', chapters: 16, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 46, name: '1 Corinthians', hindiName: '1 कुरिन्थियों', testament: 'New', chapters: 16, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 47, name: '2 Corinthians', hindiName: '2 कुरिन्थियों', testament: 'New', chapters: 13, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 48, name: 'Galatians', hindiName: 'गलतियों', testament: 'New', chapters: 6, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 49, name: 'Ephesians', hindiName: 'इफिसियों', testament: 'New', chapters: 6, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 50, name: 'Philippians', hindiName: 'फिलिप्पियों', testament: 'New', chapters: 4, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 51, name: 'Colossians', hindiName: 'कुलुस्सियों', testament: 'New', chapters: 4, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 52, name: '1 Thessalonians', hindiName: '1 थिस्सलुनीकियों', testament: 'New', chapters: 5, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 53, name: '2 Thessalonians', hindiName: '2 थिस्सलुनीकियों', testament: 'New', chapters: 3, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 54, name: '1 Timothy', hindiName: '1 तीमुथियुस', testament: 'New', chapters: 6, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 55, name: '2 Timothy', hindiName: '2 तीमुथियुस', testament: 'New', chapters: 4, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 56, name: 'Titus', hindiName: 'तीतुस', testament: 'New', chapters: 3, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 57, name: 'Philemon', hindiName: 'फिलेमोन', testament: 'New', chapters: 1, category: 'Epistles', categoryHindi: 'पौलुस की पत्री' },
+  { order: 58, name: 'Hebrews', hindiName: 'इब्रानियों', testament: 'New', chapters: 13, category: 'Epistles', categoryHindi: 'पत्री' },
+  { order: 59, name: 'James', hindiName: 'याकूब', testament: 'New', chapters: 5, category: 'Epistles', categoryHindi: 'सामान्य पत्री' },
+  { order: 60, name: '1 Peter', hindiName: '1 पतरस', testament: 'New', chapters: 5, category: 'Epistles', categoryHindi: 'सामान्य पत्री' },
+  { order: 61, name: '2 Peter', hindiName: '2 पतरस', testament: 'New', chapters: 3, category: 'Epistles', categoryHindi: 'सामान्य पत्री' },
+  { order: 62, name: '1 John', hindiName: '1 यूहन्ना', testament: 'New', chapters: 5, category: 'Epistles', categoryHindi: 'सामान्य पत्री' },
+  { order: 63, name: '2 John', hindiName: '2 यूहन्ना', testament: 'New', chapters: 1, category: 'Epistles', categoryHindi: 'सामान्य पत्री' },
+  { order: 64, name: '3 John', hindiName: '3 यूहन्ना', testament: 'New', chapters: 1, category: 'Epistles', categoryHindi: 'सामान्य पत्री' },
+  { order: 65, name: 'Jude', hindiName: 'यहूदा', testament: 'New', chapters: 1, category: 'Epistles', categoryHindi: 'सामान्य पत्री' },
+  { order: 66, name: 'Revelation', hindiName: 'प्रकाशितवाक्य', testament: 'New', chapters: 22, category: 'Prophecy', categoryHindi: 'भविष्यवाणी व प्रकाशन' },
 ];
 
 export interface ScriptureVerse {
@@ -258,13 +261,24 @@ export function searchBible(query: string): ScriptureVerse[] {
   if (!query || query.trim().length === 0) return [];
   const q = query.toLowerCase().trim();
 
+  // Find if query matches a book's English or Hindi name
+  const matchedBook = BIBLE_BOOKS.find(
+    b => b.name.toLowerCase().includes(q) || b.hindiName.toLowerCase().includes(q)
+  );
+
   // Search in famous verses
   const results = FAMOUS_VERSES.filter(
     v =>
       v.text.toLowerCase().includes(q) ||
       v.book.toLowerCase().includes(q) ||
+      (matchedBook && v.book.toLowerCase() === matchedBook.name.toLowerCase()) ||
       `${v.book} ${v.chapter}:${v.verse}`.toLowerCase().includes(q)
   );
+
+  // If user searched for a specific book and no verses matched, provide chapter 1 verses of that book
+  if (results.length === 0 && matchedBook) {
+    return getChapterVerses(matchedBook.name, 1);
+  }
 
   return results.slice(0, 50);
 }

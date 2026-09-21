@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { downloadMediaFile } from '../utils/downloader';
 import type { AudioSong } from '../types';
 
 interface SongsViewProps {
@@ -454,17 +455,15 @@ export const SongsView: React.FC<SongsViewProps> = ({ onNavigate }) => {
               </button>
             )}
 
-            {featuredSong.downloadAllowed && (
-              <a
-                href={featuredSong.audioUrl}
-                download
-                target="_blank"
-                rel="noreferrer"
-                className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700"
+            {featuredSong.audioUrl && (
+              <button
+                onClick={() => downloadMediaFile(featuredSong.audioUrl, `${featuredSong.title} - Fire Grace Worship.mp3`)}
+                className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition border border-slate-700 flex items-center gap-2"
                 title="डाउनलोड करें (Download MP3)"
               >
-                <Download className="w-4 h-4" />
-              </a>
+                <Download className="w-4 h-4 text-amber-400" />
+                <span>MP3 डाउनलोड करें</span>
+              </button>
             )}
           </div>
         </div>
@@ -676,17 +675,17 @@ export const SongsView: React.FC<SongsViewProps> = ({ onNavigate }) => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {song.downloadAllowed && (
-                      <a
-                        href={song.audioUrl}
-                        download
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white transition"
-                        title="MP3 डाउनलोड करें"
+                    {song.audioUrl && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadMediaFile(song.audioUrl, `${song.title} - Fire Grace Worship.mp3`);
+                        }}
+                        className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-amber-400 transition"
+                        title="MP3 डाउनलोड करें (Download MP3)"
                       >
                         <Download className="w-3.5 h-3.5 text-amber-400" />
-                      </a>
+                      </button>
                     )}
                     <span className="text-[10px] text-slate-400">❤️ {song.likesCount || 0}</span>
                   </div>
@@ -803,8 +802,19 @@ export const SongsView: React.FC<SongsViewProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Right: Extra Tools (Lyrics, Speed, Volume) */}
-            <div className="flex items-center justify-end gap-3 w-full md:w-1/4">
+            {/* Right: Extra Tools (Lyrics, Speed, Volume, Download) */}
+            <div className="flex items-center justify-end gap-2 sm:gap-3 w-full md:w-1/4">
+              {currentSong.audioUrl && (
+                <button
+                  onClick={() => downloadMediaFile(currentSong.audioUrl, `${currentSong.title} - Fire Grace Worship.mp3`)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 text-xs font-semibold transition"
+                  title="MP3 डाउनलोड करें (Download MP3)"
+                >
+                  <Download className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Download</span>
+                </button>
+              )}
+
               {currentSong.lyrics && (
                 <button
                   onClick={() => setLyricsSong(currentSong)}

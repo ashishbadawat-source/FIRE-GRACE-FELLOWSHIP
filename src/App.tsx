@@ -22,6 +22,7 @@ import { ActivitiesView } from './views/ActivitiesView';
 import { ContactView } from './views/ContactView';
 import { DonateView } from './views/DonateView';
 import { SongsView } from './views/SongsView';
+import { TestimoniesView } from './views/TestimoniesView';
 import { UserDashboard } from './views/UserDashboard';
 import { AdminDashboard } from './views/AdminDashboard';
 
@@ -56,7 +57,10 @@ const MainApp: React.FC = () => {
       <main className="flex-1">
         {currentView === 'home' && <HomeView onNavigate={handleNavigate} />}
         {currentView === 'about' && <AboutView onNavigate={handleNavigate} />}
-        {currentView === 'bible' && <BibleView />}
+        {currentView === 'bible' && <BibleView onNavigate={handleNavigate} />}
+        {['testimonies', 'testimony', 'gawahi'].includes(currentView) && (
+          <TestimoniesView onNavigate={handleNavigate} />
+        )}
         {currentView === 'sermons' && <SermonsView onNavigateToBible={() => handleNavigate('bible')} />}
         {currentView === 'photos' && <PhotosView />}
         {currentView === 'videos' && <VideosView />}
