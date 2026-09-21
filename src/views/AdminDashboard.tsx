@@ -461,8 +461,12 @@ export const AdminDashboard: React.FC = () => {
   // Add Audio Song (ऑडियो गीत)
   const handleAddSong = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!songTitle.trim() || !songArtist.trim() || !songAudioUrl.trim()) {
-      alert('गीत का शीर्षक (Title), गायक (Artist), और ऑडियो लिंक (Audio URL) आवश्यक हैं।');
+    if (!songTitle.trim() || !songArtist.trim()) {
+      alert('गीत का शीर्षक (Song Title) और गायक/टीम (Artist) आवश्यक हैं।');
+      return;
+    }
+    if (!songAudioUrl.trim()) {
+      alert('कृपया गीत की ऑडियो फ़ाइल (MP3) अपलोड करें या ऑडियो URL लिंक दर्ज करें।');
       return;
     }
     try {
@@ -484,6 +488,7 @@ export const AdminDashboard: React.FC = () => {
       setSongTitle('');
       setSongLyrics('');
       setSongAudioUrl('');
+      setSongCover('');
       loadAllAdminData();
     } catch (err: any) {
       alert(err.message || 'Failed to add audio song');
@@ -597,15 +602,25 @@ export const AdminDashboard: React.FC = () => {
   // Add Photo
   const handleAddPhoto = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!photoTitle.trim()) {
+      alert('कृपया फोटो का शीर्षक (Title) दर्ज करें।');
+      return;
+    }
+    if (!photoUrl.trim()) {
+      alert('कृपया फोटो फ़ाइल अपलोड करें या फोटो URL दर्ज करें।');
+      return;
+    }
     try {
       await api.createPhoto({
-        title: photoTitle,
-        url: photoUrl,
+        title: photoTitle.trim(),
+        url: photoUrl.trim(),
         albumId: photoAlbumId,
-        description: photoDesc,
+        description: photoDesc.trim(),
       });
       showNotification('Photo published to church gallery!');
       setPhotoTitle('');
+      setPhotoUrl('');
+      setPhotoDesc('');
       loadAllAdminData();
     } catch (err: any) {
       alert(err.message || 'Failed to add photo');
@@ -1390,12 +1405,23 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-slate-300">YouTube Video URL / Embed Link</label>
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-semibold transition">
-                    <UploadCloud className="w-3.5 h-3.5 text-rose-400" />
-                    <span>{isUploading ? 'अपलोड हो रहा है...' : '📁 वीडियो फ़ाइल अपलोड करें'}</span>
+              {/* Video Source Option Box */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <Video className="w-4 h-4" /> वीडियो स्रोत (Video Source)
+                  </label>
+                  <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded">फ़ाइल अपलोड या URL (कोई एक)</span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  डायरेक्ट URL लिंक अनिवार्य नहीं है। यदि आपके पास लिंक नहीं है, तो आप सीधे वीडियो फ़ाइल अपलोड कर सकते हैं।
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {/* Option 1: File Upload */}
+                  <label className="cursor-pointer flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold transition text-center">
+                    <UploadCloud className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>{isUploading ? 'अपलोड हो रहा है...' : '📁 वीडियो फ़ाइल अपलोड करें (MP4/WebM)'}</span>
                     <input
                       type="file"
                       accept="video/*"
@@ -1407,21 +1433,49 @@ export const AdminDashboard: React.FC = () => {
                       }}
                     />
                   </label>
+
+                  {/* Option 2: Direct URL */}
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={sermonYoutube}
+                      onChange={e => setSermonYoutube(e.target.value)}
+                      placeholder="🔗 या YouTube / वीडियो लिंक डालें"
+                      className="w-full h-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500"
+                    />
+                  </div>
                 </div>
-                <input
-                  type="url"
-                  value={sermonYoutube}
-                  onChange={e => setSermonYoutube(e.target.value)}
-                  placeholder="https://www.youtube.com/embed/... या अपलोड किया गया वीडियो"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
-                />
+
+                {/* Video status indicator */}
+                {sermonYoutube && (
+                  <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2 text-[11px] text-emerald-400">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Check className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate font-mono">वीडियो सेट: {sermonYoutube.slice(0, 45)}...</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSermonYoutube('')}
+                      className="text-slate-400 hover:text-rose-400 text-[10px] shrink-0 font-semibold"
+                    >
+                      हटाएं
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-slate-300">Audio Recording URL (वचन का ऑडियो लिंक - MP3)</label>
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 rounded-lg text-[11px] font-semibold transition">
-                    <UploadCloud className="w-3.5 h-3.5 text-cyan-400" />
+              {/* Sermon Audio (Optional) */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                    <Music className="w-4 h-4" /> प्रवचन ऑडियो रिकॉर्डिंग (Audio Recording - MP3)
+                  </label>
+                  <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded">वैकल्पिक (Optional)</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label className="cursor-pointer flex items-center justify-center gap-2 p-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition text-center">
+                    <UploadCloud className="w-4 h-4 text-cyan-400 shrink-0" />
                     <span>{isUploading ? 'अपलोड हो रहा है...' : '🎙️ ऑडियो MP3 अपलोड करें'}</span>
                     <input
                       type="file"
@@ -1434,22 +1488,38 @@ export const AdminDashboard: React.FC = () => {
                       }}
                     />
                   </label>
+
+                  <input
+                    type="url"
+                    value={sermonAudioUrl}
+                    onChange={e => setSermonAudioUrl(e.target.value)}
+                    placeholder="🔗 या MP3 ऑडियो URL लिंक डालें"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder-slate-500"
+                  />
                 </div>
-                <input
-                  type="url"
-                  value={sermonAudioUrl}
-                  onChange={e => setSermonAudioUrl(e.target.value)}
-                  placeholder="https://.../sermon.mp3"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs"
-                />
+
+                {sermonAudioUrl && (
+                  <div className="pt-1">
+                    <audio controls className="w-full h-7 rounded-lg">
+                      <source src={sermonAudioUrl} />
+                    </audio>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-slate-300">Thumbnail Image URL</label>
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[11px] font-semibold transition">
-                    <UploadCloud className="w-3.5 h-3.5 text-amber-400" />
-                    <span>🖼️ थंबनेल अपलोड करें</span>
+              {/* Thumbnail Image */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-amber-400" /> थंबनेल इमेज (Thumbnail Image)
+                  </label>
+                  <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded">फोटो अपलोड या URL</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label className="cursor-pointer flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-bold transition text-center">
+                    <UploadCloud className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>🖼️ थंबनेल फोटो अपलोड करें</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1461,13 +1531,22 @@ export const AdminDashboard: React.FC = () => {
                       }}
                     />
                   </label>
+
+                  <input
+                    type="url"
+                    value={sermonThumb}
+                    onChange={e => setSermonThumb(e.target.value)}
+                    placeholder="🔗 या थंबनेल इमेज URL डालें"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500"
+                  />
                 </div>
-                <input
-                  type="url"
-                  value={sermonThumb}
-                  onChange={e => setSermonThumb(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
-                />
+
+                {sermonThumb && (
+                  <div className="flex items-center gap-2.5 pt-1">
+                    <img src={sermonThumb} alt="Thumbnail preview" className="w-12 h-12 object-cover rounded-lg border border-slate-700" />
+                    <span className="text-[11px] text-emerald-400 font-semibold">✓ थंबनेल तैयार</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1617,12 +1696,23 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-slate-300">ऑडियो लिंक (MP3 Audio URL) *</label>
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-lg text-[11px] font-semibold transition">
-                    <UploadCloud className="w-3.5 h-3.5" />
-                    <span>{isUploading ? 'अपलोड हो रहा है...' : '📁 MP3 ऑडियो फ़ाइल अपलोड करें'}</span>
+              {/* Audio Source Option Box */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <Music className="w-4 h-4" /> ऑडियो गीत स्रोत (Audio Track) *
+                  </label>
+                  <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded">MP3 अपलोड या URL</span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  डायरेक्ट URL लिंक की आवश्यकता नहीं है — आप सीधे अपने फोन/कंप्यूटर से MP3 ऑडियो फ़ाइल अपलोड कर सकते हैं।
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {/* Option 1: Direct File Upload */}
+                  <label className="cursor-pointer flex items-center justify-center gap-2 p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition text-center">
+                    <UploadCloud className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>{isUploading ? 'अपलोड हो रहा है...' : '📁 MP3 फ़ाइल अपलोड करें (Browse MP3)'}</span>
                     <input
                       type="file"
                       accept="audio/*"
@@ -1634,18 +1724,22 @@ export const AdminDashboard: React.FC = () => {
                       }}
                     />
                   </label>
+
+                  {/* Option 2: Direct URL */}
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={songAudioUrl}
+                      onChange={e => setSongAudioUrl(e.target.value)}
+                      placeholder="🔗 या ऑनलाइन ऑडियो URL दर्ज करें"
+                      className="w-full h-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder-slate-500"
+                    />
+                  </div>
                 </div>
-                <input
-                  type="url"
-                  required
-                  value={songAudioUrl}
-                  onChange={e => setSongAudioUrl(e.target.value)}
-                  placeholder="https://.../song.mp3 या ऊपर से सीधे MP3 अपलोड करें"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs"
-                />
+
                 {/* Quick samples buttons */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] text-slate-400">सैंपल:</span>
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className="text-[10px] text-slate-400">सैंपल टेस्ट:</span>
                   {[
                     { label: 'Sample 1', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
                     { label: 'Sample 2', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
@@ -1655,19 +1749,47 @@ export const AdminDashboard: React.FC = () => {
                       key={i}
                       type="button"
                       onClick={() => setSongAudioUrl(smp.url)}
-                      className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px]"
+                      className="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 text-[10px] border border-slate-800"
                     >
                       {smp.label}
                     </button>
                   ))}
                 </div>
+
+                {/* Live Audio Player preview */}
+                {songAudioUrl && (
+                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-emerald-400 font-bold flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> ऑडियो तैयार है (Audio Ready)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSongAudioUrl('')}
+                        className="text-slate-400 hover:text-rose-400 text-[10px] font-semibold"
+                      >
+                        हटाएं
+                      </button>
+                    </div>
+                    <audio controls className="w-full h-7 rounded-lg">
+                      <source src={songAudioUrl} />
+                    </audio>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-slate-300">कवर इमेज URL (Cover Image)</label>
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[11px] font-semibold transition">
-                    <UploadCloud className="w-3.5 h-3.5 text-amber-400" />
+              {/* Cover Art Option Box */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-amber-400" /> कवर इमेज (Cover Photo)
+                  </label>
+                  <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded">फोटो अपलोड या URL</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label className="cursor-pointer flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-bold transition text-center">
+                    <UploadCloud className="w-4 h-4 text-amber-400 shrink-0" />
                     <span>🖼️ कवर फोटो अपलोड करें</span>
                     <input
                       type="file"
@@ -1680,14 +1802,22 @@ export const AdminDashboard: React.FC = () => {
                       }}
                     />
                   </label>
+
+                  <input
+                    type="url"
+                    value={songCover}
+                    onChange={e => setSongCover(e.target.value)}
+                    placeholder="🔗 या कवर फोटो URL डालें"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500"
+                  />
                 </div>
-                <input
-                  type="url"
-                  value={songCover}
-                  onChange={e => setSongCover(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs"
-                />
+
+                {songCover && (
+                  <div className="flex items-center gap-2.5 pt-1">
+                    <img src={songCover} alt="Cover preview" className="w-12 h-12 object-cover rounded-lg border border-slate-700" />
+                    <span className="text-[11px] text-emerald-400 font-semibold">✓ कवर फोटो तैयार</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -2301,12 +2431,23 @@ export const AdminDashboard: React.FC = () => {
                 </select>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-slate-300">Image URL *</label>
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-semibold transition">
-                    <UploadCloud className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{isUploading ? 'अपलोड हो रहा है...' : '📸 फोन/कंप्यूटर से फोटो अपलोड करें'}</span>
+              {/* Photo Source Option Box */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4" /> चर्च फोटो (Photo Source) *
+                  </label>
+                  <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded">फोटो अपलोड या URL</span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  डायरेक्ट URL लिंक की जरूरत नहीं है — आप सीधे अपने मोबाइल या कंप्यूटर से फोटो अपलोड कर सकते हैं।
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {/* Option 1: Direct File Upload */}
+                  <label className="cursor-pointer flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition text-center">
+                    <UploadCloud className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>{isUploading ? 'अपलोड हो रहा है...' : '📸 फोन/कंप्यूटर से फोटो चुनें'}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -2318,15 +2459,37 @@ export const AdminDashboard: React.FC = () => {
                       }}
                     />
                   </label>
+
+                  {/* Option 2: Image URL */}
+                  <input
+                    type="url"
+                    value={photoUrl}
+                    onChange={e => setPhotoUrl(e.target.value)}
+                    placeholder="🔗 या ऑनलाइन इमेज URL दर्ज करें"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500"
+                  />
                 </div>
-                <input
-                  type="url"
-                  required
-                  value={photoUrl}
-                  onChange={e => setPhotoUrl(e.target.value)}
-                  placeholder="https://... या ऊपर दिए बटन से सीधे फोटो अपलोड करें"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
-                />
+
+                {photoUrl && (
+                  <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2 text-[11px]">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img src={photoUrl} alt="Preview" className="w-12 h-12 rounded-lg object-cover border border-slate-700 shrink-0" />
+                      <div className="min-w-0">
+                        <span className="text-emerald-400 font-bold block flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5" /> फोटो तैयार है
+                        </span>
+                        <span className="text-[10px] text-slate-400 truncate block font-mono">{photoUrl.slice(0, 35)}...</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoUrl('')}
+                      className="text-slate-400 hover:text-rose-400 text-[10px] font-semibold shrink-0"
+                    >
+                      हटाएं
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div>
