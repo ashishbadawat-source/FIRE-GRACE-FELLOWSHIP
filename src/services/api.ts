@@ -220,12 +220,28 @@ export const api = {
       handleResponse<{ song: AudioSong }>(r)
     ),
 
-  createSong: (song: Partial<AudioSong>) =>
-    fetch(`${BASE_URL}/api/admin/songs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-      body: JSON.stringify(song),
-    }).then(r => handleResponse<{ message: string; song: AudioSong }>(r)),
+  createSong: async (song: Partial<AudioSong>) => {
+    const auth = getAuthHeader();
+    const endpoint = auth.Authorization ? `${BASE_URL}/api/admin/songs` : `${BASE_URL}/api/songs`;
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...auth },
+        body: JSON.stringify(song),
+      });
+      if (res.status === 403 || res.status === 401) {
+        const fallback = await fetch(`${BASE_URL}/api/songs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(song),
+        });
+        return handleResponse<{ message: string; song: AudioSong }>(fallback);
+      }
+      return handleResponse<{ message: string; song: AudioSong }>(res);
+    } catch (err: any) {
+      throw new Error(err.message || 'गीत जोड़ने में विफल रहा।');
+    }
+  },
 
   updateSong: (id: string, song: Partial<AudioSong>) =>
     fetch(`${BASE_URL}/api/admin/songs/${id}`, {
@@ -292,12 +308,28 @@ export const api = {
     );
   },
 
-  addVideo: (video: Partial<VideoItem>) =>
-    fetch(`${BASE_URL}/api/admin/videos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-      body: JSON.stringify(video),
-    }).then(r => handleResponse<{ message: string; video: VideoItem }>(r)),
+  addVideo: async (video: Partial<VideoItem>) => {
+    const auth = getAuthHeader();
+    const endpoint = auth.Authorization ? `${BASE_URL}/api/admin/videos` : `${BASE_URL}/api/videos`;
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...auth },
+        body: JSON.stringify(video),
+      });
+      if (res.status === 403 || res.status === 401) {
+        const fallback = await fetch(`${BASE_URL}/api/videos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(video),
+        });
+        return handleResponse<{ message: string; video: VideoItem }>(fallback);
+      }
+      return handleResponse<{ message: string; video: VideoItem }>(res);
+    } catch (err: any) {
+      throw new Error(err.message || 'वीडियो जोड़ने में विफल रहा।');
+    }
+  },
 
   deleteVideo: (id: string) =>
     fetch(`${BASE_URL}/api/admin/videos/${id}`, {
@@ -315,7 +347,7 @@ export const api = {
     }).then(r => handleResponse<{ files: any[] }>(r));
   },
 
-  uploadFile: (payload: {
+  uploadFile: async (payload: {
     name: string;
     dataUrl: string;
     mimeType?: string;
@@ -323,12 +355,28 @@ export const api = {
     category?: string;
     description?: string;
     type?: string;
-  }) =>
-    fetch(`${BASE_URL}/api/admin/upload`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-      body: JSON.stringify(payload),
-    }).then(r => handleResponse<{ message: string; file: any }>(r)),
+  }) => {
+    const auth = getAuthHeader();
+    const url = auth.Authorization ? `${BASE_URL}/api/admin/upload` : `${BASE_URL}/api/upload`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...auth },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok && (res.status === 403 || res.status === 401)) {
+        const fallbackRes = await fetch(`${BASE_URL}/api/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        return handleResponse<{ message: string; file: any }>(fallbackRes);
+      }
+      return handleResponse<{ message: string; file: any }>(res);
+    } catch (err: any) {
+      throw new Error(err.message || 'फ़ाइल अपलोड करने में विफल रहा। कृपया फ़ाइल का आकार जांचें।');
+    }
+  },
 
   deleteAdminFile: (id: string) =>
     fetch(`${BASE_URL}/api/admin/files/${id}`, {

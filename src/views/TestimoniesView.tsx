@@ -22,6 +22,7 @@ import {
   FileCheck,
 } from 'lucide-react';
 import { api } from '../services/api';
+import { TestimonyBookReader } from '../components/TestimonyBookReader';
 import type { TestimonyItem } from '../types';
 
 interface TestimoniesViewProps {
@@ -45,6 +46,7 @@ export const TestimoniesView: React.FC<TestimoniesViewProps> = ({ onNavigate }) 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [amenLoadingId, setAmenLoadingId] = useState<string | null>(null);
+  const [showTestimonyBook, setShowTestimonyBook] = useState<boolean>(false);
 
   // Submit Modal
   const [isSubmitOpen, setIsSubmitOpen] = useState<boolean>(false);
@@ -162,10 +164,18 @@ export const TestimoniesView: React.FC<TestimoniesViewProps> = ({ onNavigate }) 
 
         <div className="pt-2 flex flex-wrap justify-center gap-3">
           <button
-            onClick={() => setIsSubmitOpen(true)}
-            className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition flex items-center gap-2 shadow-lg shadow-amber-500/20 transform hover:scale-105 active:scale-95"
+            onClick={() => setShowTestimonyBook(true)}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-bold text-xs sm:text-sm transition flex items-center gap-2 shadow-lg shadow-amber-500/20 transform hover:scale-105 active:scale-95"
           >
-            <Plus className="w-4 h-4" />
+            <BookOpen className="w-4 h-4" />
+            <span>📖 फ्री गवाही पुस्तक (Free Testimony Book)</span>
+          </button>
+
+          <button
+            onClick={() => setIsSubmitOpen(true)}
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm transition flex items-center gap-2 border border-slate-700"
+          >
+            <Plus className="w-4 h-4 text-amber-400" />
             <span>अपनी गवाही दर्ज करें (Share Testimony)</span>
           </button>
 
@@ -517,6 +527,11 @@ export const TestimoniesView: React.FC<TestimoniesViewProps> = ({ onNavigate }) 
           </div>
         </div>
       )}
+      {/* Free Testimony Book Reader Modal */}
+      <TestimonyBookReader
+        isOpen={showTestimonyBook}
+        onClose={() => setShowTestimonyBook(false)}
+      />
     </div>
   );
 };

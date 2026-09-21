@@ -27,6 +27,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { PWAInstallButton } from './PWAInstallButton';
 import { api } from '../services/api';
+import { TestimonyBookReader } from './TestimonyBookReader';
 
 interface HeaderProps {
   currentView: string;
@@ -40,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
   const [mediaDropdownOpen, setMediaDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
+  const [showTestimonyBook, setShowTestimonyBook] = useState(false);
 
   const handleAdminAccess = async () => {
     if (user?.role === 'admin') {
@@ -148,6 +150,17 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
               }`}
             >
               Testimonies
+            </button>
+
+            {/* Free Testimony Book Button */}
+            <button
+              id="nav-testimony-book-btn"
+              onClick={() => setShowTestimonyBook(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/40 text-amber-300 shadow-sm"
+              title="फ्री गवाही पुस्तक (Free Testimony Book)"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+              <span>गवाही बुक (E-Book)</span>
             </button>
 
             <button
@@ -518,6 +531,23 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
 
           {/* Navigation Items */}
           <div className="space-y-1 text-sm font-medium border-t border-white/10 pt-3">
+            {/* Free Testimony Book in Mobile Menu */}
+            <button
+              onClick={() => {
+                setShowTestimonyBook(true);
+                setMobileMenuOpen(false);
+              }}
+              className="w-full text-left px-4 py-2.5 rounded-xl font-bold text-xs bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-between"
+            >
+              <span className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-amber-400" />
+                📖 फ्री गवाही पुस्तक (Free Testimony Book)
+              </span>
+              <span className="text-[10px] bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded-full">
+                FREE E-BOOK
+              </span>
+            </button>
+
             {[
               { id: 'home', label: 'Home' },
               { id: 'donate', label: 'Online Giving & Tithes' },
@@ -564,6 +594,11 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
           </div>
         </div>
       )}
+      {/* Free Testimony Book Modal Reader */}
+      <TestimonyBookReader
+        isOpen={showTestimonyBook}
+        onClose={() => setShowTestimonyBook(false)}
+      />
     </header>
   );
 };

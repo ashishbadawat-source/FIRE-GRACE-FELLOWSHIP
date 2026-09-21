@@ -24,6 +24,7 @@ import {
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ALL_66_BIBLE_BOOKS } from '../data/bibleBooks';
+import { TestimonyBookReader } from '../components/TestimonyBookReader';
 import type { BibleVerse, BibleBookmark, BibleBook, TestimonyItem } from '../types';
 
 interface BibleViewProps {
@@ -49,9 +50,10 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [chapterPickerBook, setChapterPickerBook] = useState<BibleBook | null>(null);
 
-  // Quick testimonies preview state
+  // Quick testimonies preview state & Testimony Book reader
   const [quickTestimonies, setQuickTestimonies] = useState<TestimonyItem[]>([]);
   const [isLoadingTestimonies, setIsLoadingTestimonies] = useState<boolean>(false);
+  const [showTestimonyBook, setShowTestimonyBook] = useState<boolean>(false);
 
   useEffect(() => {
     // Load dynamic books from server if available, fallback to ALL_66_BIBLE_BOOKS
@@ -88,11 +90,16 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
     }
   }, [activeTab]);
 
-  const handleSearchSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    // The user clicked "बाईबल सर्च". Ensure 66 Books are immediately visible!
+    setActiveTab('books');
+    setBookFilterQuery(searchQuery.trim());
+
     if (!searchQuery.trim()) return;
 
-    // Check if query matches a book name first
+    // Check if query matches a book name
     const qLower = searchQuery.trim().toLowerCase();
     const matchedBook = books.find(
       b =>
@@ -101,7 +108,6 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
     );
 
     if (matchedBook) {
-      // Focus on books directory with filter
       setBookFilterQuery(searchQuery.trim());
       setActiveTab('books');
     }
@@ -110,10 +116,7 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
     setIsSearching(true);
     try {
       const res = await api.searchBible(searchQuery.trim());
-      setSearchResults(res.results);
-      if (!matchedBook) {
-        setActiveTab('search');
-      }
+      setSearchResults(res.results || []);
     } catch {
       // ignore
     } finally {
@@ -234,9 +237,12 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
               <input
                 type="text"
                 value={searchQuery}
+                onFocus={() => setActiveTab('books')}
+                onClick={() => setActiveTab('books')}
                 onChange={e => {
                   setSearchQuery(e.target.value);
                   setBookFilterQuery(e.target.value);
+                  setActiveTab('books');
                 }}
                 placeholder="किताब या वचन खोजें (उदा. मत्ती, भजन, प्रेम, विश्वास)..."
                 className="w-full bg-slate-950/90 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
@@ -309,6 +315,16 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
               <span>बुकमार्क ({bookmarks.length})</span>
             </button>
 
+            {/* Free Testimony Book Option */}
+            <button
+              onClick={() => setShowTestimonyBook(true)}
+              className="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 shadow-md shadow-amber-500/20 hover:brightness-110"
+              title="फ्री गवाही पुस्तक (Free Testimony E-Book)"
+            >
+              <Sparkles className="w-3.5 h-3.5 fill-current" />
+              <span>📖 फ्री गवाही पुस्तक (Free Testimony Book)</span>
+            </button>
+
             {/* Testimony Book Option */}
             <button
               onClick={() => setActiveTab('testimonies')}
@@ -318,8 +334,8 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
                   : 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>गवाही पुस्तिका (Testimony Book)</span>
+              <Heart className="w-3.5 h-3.5 text-amber-400" />
+              <span>गवाही पुस्तिका</span>
             </button>
           </div>
 
@@ -862,16 +878,47 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowTestimonyBook(true)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition shadow"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>📖 फ्री गवाही पुस्तक खोलें</span>
+              </button>
               {onNavigate && (
                 <button
                   onClick={() => onNavigate('testimonies')}
-                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition shadow"
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium text-xs flex items-center gap-1.5 transition border border-slate-700"
                 >
                   <span>गवाही पृष्ठ खोलें (Full Page)</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Banner for Free Testimony Book */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-amber-950/40 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                  100% FREE E-BOOK
+                </span>
+                <h3 className="text-white font-bold text-sm sm:text-base">
+                  जीवित गवाही एवं ईश्वरीय चमत्कार ई-बुक (2026 Edition)
+                </h3>
+              </div>
+              <p className="text-xs text-slate-300">
+                चमत्कारों, चंगाई और छुटकारे की सच्ची गवाहियां, बाइबल संदर्भ सहित ऑनलाइन पढ़ें या मुफ्त PDF डाउनलोड करें।
+              </p>
+            </div>
+            <button
+              onClick={() => setShowTestimonyBook(true)}
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition flex items-center gap-2 shrink-0 shadow-md"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>पूरी पुस्तक पढ़ें व डाउनलोड करें</span>
+            </button>
           </div>
 
           {isLoadingTestimonies ? (
@@ -987,6 +1034,11 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
           </div>
         </div>
       )}
+      {/* Free Testimony Book Reader Modal */}
+      <TestimonyBookReader
+        isOpen={showTestimonyBook}
+        onClose={() => setShowTestimonyBook(false)}
+      />
     </div>
   );
 };

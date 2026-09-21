@@ -33,6 +33,10 @@ import {
   Minimize2,
   Copy,
   ExternalLink,
+  Upload,
+  Loader2,
+  CheckCircle,
+  FileAudio,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -94,6 +98,12 @@ export const SongsView: React.FC<SongsViewProps> = ({ onNavigate }) => {
   const [newLyrics, setNewLyrics] = useState('');
   const [newDownloadAllowed, setNewDownloadAllowed] = useState(true);
   const [newFeatured, setNewFeatured] = useState(false);
+
+  // Direct Audio File Upload States
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [audioUploadProgress, setAudioUploadProgress] = useState('');
+  const [audioFileName, setAudioFileName] = useState('');
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
   // Quick preset audio samples for easy testing if user doesn't have custom MP3 url
   const presetAudioOptions = [
@@ -252,6 +262,98 @@ export const SongsView: React.FC<SongsViewProps> = ({ onNavigate }) => {
     e.stopPropagation();
     const text = `🎵 *${song.title}* by ${song.artist}\nFire & Grace Fellowship Audio Songs\nListen now: ${window.location.origin}/#songs`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  // Direct Audio File Upload
+  const handleAudioFileUpload = async (file: File) => {
+    if (!file) return;
+    const MAX_SIZE = 100 * 1024 * 1024; // 100MB
+    if (file.size > MAX_SIZE) {
+      setAddSongError(`ऑडियो फ़ाइल 100MB से छोटी होनी चाहिए। आपकी फ़ाइल: ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
+      return;
+    }
+
+    setIsUploadingAudio(true);
+    setAddSongError('');
+    setAddSongSuccess('');
+    setAudioFileName(file.name);
+    setAudioUploadProgress(`ऑडियो प्रोसेस और अपलोड हो रहा है (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`);
+
+    // Detect duration using audio element
+    try {
+      const audioUrl = URL.createObjectURL(file);
+      const audioTest = new Audio(audioUrl);
+      audioTest.onloadedmetadata = () => {
+        if (audioTest.duration && !isNaN(audioTest.duration)) {
+          const mins = Math.floor(audioTest.duration / 60);
+          const secs = Math.floor(audioTest.duration % 60);
+          setNewDuration(`${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`);
+        }
+      };
+    } catch {
+      // ignore
+    }
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const dataUrl = reader.result as string;
+          const res = await api.uploadFile({
+            name: file.name,
+            dataUrl,
+            mimeType: file.type || 'audio/mpeg',
+            size: file.size,
+            category: 'Worship Audio Song',
+            type: 'audio',
+          });
+          const uploadedUrl = res.file?.url || dataUrl;
+          setNewAudioUrl(uploadedUrl);
+          if (!newTitle.trim()) {
+            setNewTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+          }
+          setAddSongSuccess(`ऑडियो फ़ाइल "${file.name}" सफलतापूर्वक अपलोड हो गई!`);
+        } catch (err: any) {
+          setAddSongError(err.message || 'ऑडियो अपलोड करने में समस्या हुई।');
+        } finally {
+          setIsUploadingAudio(false);
+          setAudioUploadProgress('');
+        }
+      };
+      reader.onerror = () => {
+        setIsUploadingAudio(false);
+        setAddSongError('फ़ाइल पढ़ने में त्रुटि हुई।');
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setIsUploadingAudio(false);
+      setAddSongError(err.message || 'त्रुटि हुई');
+    }
+  };
+
+  // Direct Cover File Upload
+  const handleCoverFileUpload = (file: File) => {
+    if (!file) return;
+    setIsUploadingCover(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const dataUrl = reader.result as string;
+        const res = await api.uploadFile({
+          name: file.name,
+          dataUrl,
+          mimeType: file.type || 'image/jpeg',
+          category: 'Song Cover Art',
+          type: 'image',
+        });
+        setNewCoverImage(res.file?.url || dataUrl);
+      } catch {
+        alert('कवर फोटो अपलोड में समस्या हुई।');
+      } finally {
+        setIsUploadingCover(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // Submit New Song
@@ -1064,14 +1166,59 @@ export const SongsView: React.FC<SongsViewProps> = ({ onNavigate }) => {
                 </div>
               </div>
 
+              {/* Direct Audio File Dropzone */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>1. अपने डिवाइस से MP3 / ऑडियो फ़ाइल चुनें (Upload MP3 directly)</span>
+                </label>
+                <div className="border-2 border-dashed border-amber-500/40 hover:border-amber-400/80 rounded-2xl p-4 bg-amber-500/5 hover:bg-amber-500/10 transition text-center cursor-pointer relative group">
+                  <input
+                    type="file"
+                    accept="audio/mp3,audio/mpeg,audio/wav,audio/m4a,audio/aac,audio/ogg,audio/*"
+                    onChange={e => e.target.files?.[0] && handleAudioFileUpload(e.target.files[0])}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    disabled={isUploadingAudio}
+                  />
+                  <div className="space-y-2 pointer-events-none">
+                    <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 mx-auto group-hover:scale-110 transition">
+                      {isUploadingAudio ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-amber-400" />
+                      ) : (
+                        <FileAudio className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">
+                        {isUploadingAudio
+                          ? audioUploadProgress || 'ऑडियो फ़ाइल अपलोड हो रही है...'
+                          : newAudioUrl.startsWith('/uploads/')
+                          ? `✅ "${audioFileName || 'Audio'}" सफलतापूर्वक अपलोड हो गई!`
+                          : 'MP3 फ़ाइल चुनने के लिए यहाँ क्लिक करें (Click to select MP3)'}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        समर्थित: MP3, WAV, M4A, OGG (100MB तक फ़ाइल साइज)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Audio preview if uploaded */}
+                {newAudioUrl && (
+                  <div className="pt-1">
+                    <audio src={newAudioUrl} controls className="w-full h-8 rounded-lg" />
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300">
-                  ऑडियो लिंक / MP3 URL <span className="text-amber-400">*</span>
+                  या ऑडियो लिंक / MP3 URL दर्ज करें <span className="text-amber-400">*</span>
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   required
-                  placeholder="https://your-audio-host.com/track.mp3"
+                  placeholder="https://your-audio-host.com/track.mp3 या /uploads/..."
                   value={newAudioUrl}
                   onChange={e => setNewAudioUrl(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-500 font-mono"
@@ -1093,15 +1240,35 @@ export const SongsView: React.FC<SongsViewProps> = ({ onNavigate }) => {
                 </div>
               </div>
 
+              {/* Cover Image with direct file upload */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">एल्बम कवर इमेज URL (Cover Image)</label>
-                <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={newCoverImage}
-                  onChange={e => setNewCoverImage(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-500 font-mono"
-                />
+                <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                  <span>एल्बम कवर इमेज (Cover Image)</span>
+                  <span className="text-[10px] text-slate-400">वैकल्पिक</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="https://images.unsplash.com/... या फोटो चुनें"
+                    value={newCoverImage}
+                    onChange={e => setNewCoverImage(e.target.value)}
+                    className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <label className="shrink-0 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700 flex items-center gap-1.5">
+                    {isUploadingCover ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 text-amber-400" />
+                    )}
+                    <span>फोटो चुनें</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => e.target.files?.[0] && handleCoverFileUpload(e.target.files[0])}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
 
               <div className="space-y-1.5">

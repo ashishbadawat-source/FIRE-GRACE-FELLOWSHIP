@@ -21,6 +21,13 @@ export async function downloadMediaFile(url: string, defaultFilename: string): P
     .replace(/[/\\?%*:|"<>]/g, '_')
     .trim();
 
+  // 0. If local /uploads/ URL or server-hosted file, download directly via /api/download endpoint
+  if (url.startsWith('/uploads/') || url.includes('/uploads/') || url.startsWith('/api/files/')) {
+    const downloadEndpoint = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+    triggerDownload(downloadEndpoint, filename);
+    return true;
+  }
+
   // 1. Base64 data URL
   if (url.startsWith('data:')) {
     try {

@@ -6,6 +6,7 @@
 import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { db, hashPassword, verifyPassword, generateMemberId } from './server/db';
 import { BIBLE_BOOKS, FAMOUS_VERSES, getChapterVerses, searchBible } from './server/bibleData';
@@ -14,8 +15,18 @@ import type { UserProfile, TestimonyItem } from './src/types';
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Uploads storage folder setup
+const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Serve uploaded files directly with HTTP Range streaming support for MP3 audio and MP4 videos
+app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
+
+// Allow high payload sizes up to 200MB for direct MP3 audio and video file uploads
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
 // Token generation and verification helper
 const TOKEN_SECRET = 'fgf_holy_fire_secret_key_2026';
@@ -747,6 +758,59 @@ app.post('/api/admin/songs', adminRequired, (req, res) => {
   res.status(201).json({ message: 'Audio song added successfully.', song: newSong });
 });
 
+// Community & Worship Song Submission / Upload
+app.post('/api/songs', (req, res) => {
+  const {
+    title,
+    artist,
+    album,
+    language,
+    category,
+    audioUrl,
+    duration,
+    coverImage,
+    lyrics,
+    chordChartUrl,
+    downloadAllowed,
+    downloadUrl,
+    featured,
+  } = req.body;
+
+  if (!title || !artist || !audioUrl) {
+    res.status(400).json({ error: 'Song title, artist/singer, and audio URL are required.' });
+    return;
+  }
+
+  const data = db.getData();
+  if (!data.songs) data.songs = [];
+
+  const newSong = {
+    id: `song_${Date.now()}`,
+    title: title.trim(),
+    artist: artist.trim(),
+    album: album?.trim() || 'Worship Ministry',
+    language: language || 'Hindi',
+    category: category || 'Worship',
+    audioUrl: audioUrl.trim(),
+    duration: duration?.trim() || '04:30',
+    coverImage:
+      coverImage?.trim() ||
+      'https://images.unsplash.com/photo-1510525009512-ad7fc0c02b28?w=800&auto=format&fit=crop&q=80',
+    lyrics: lyrics?.trim() || '',
+    chordChartUrl: chordChartUrl?.trim() || '',
+    downloadAllowed: downloadAllowed !== undefined ? !!downloadAllowed : true,
+    downloadUrl: downloadUrl?.trim() || audioUrl.trim(),
+    playsCount: 0,
+    likesCount: 0,
+    dateAdded: new Date().toISOString().split('T')[0],
+    featured: !!featured,
+  };
+
+  data.songs.unshift(newSong);
+  db.save();
+  res.status(201).json({ message: 'ऑडियो गीत सफलतापूर्वक जोड़ दिया गया है!', song: newSong });
+});
+
 app.put('/api/admin/songs/:id', adminRequired, (req, res) => {
   const data = db.getData();
   if (!data.songs) data.songs = [];
@@ -918,6 +982,32 @@ app.post('/api/admin/videos', adminRequired, (req, res) => {
   res.status(201).json({ message: 'Video added successfully.', video: newVideo });
 });
 
+// Community / Member video upload & submission
+app.post('/api/videos', (req, res) => {
+  const { title, category, youtubeUrl, thumbnail, duration, speaker } = req.body;
+  if (!title || !youtubeUrl) {
+    res.status(400).json({ error: 'Video title and video/YouTube URL are required.' });
+    return;
+  }
+  const data = db.getData();
+  if (!data.videos) data.videos = [];
+  const newVideo = {
+    id: `vid_${Date.now()}`,
+    title: title.trim(),
+    category: category || 'Worship',
+    youtubeUrl: youtubeUrl.trim(),
+    thumbnail:
+      thumbnail?.trim() ||
+      'https://images.unsplash.com/photo-1510525009512-ad7fc0c02b28?w=800&auto=format&fit=crop&q=80',
+    date: new Date().toISOString().split('T')[0],
+    duration: duration?.trim() || '35:00',
+    speaker: speaker?.trim() || 'Fire Grace Ministry',
+  };
+  data.videos.unshift(newVideo);
+  db.save();
+  res.status(201).json({ message: 'वीडियो सफलतापूर्वक जोड़ दिया गया है!', video: newVideo });
+});
+
 app.delete('/api/admin/videos/:id', adminRequired, (req, res) => {
   const data = db.getData();
   data.videos = data.videos.filter(v => v.id !== req.params.id);
@@ -946,6 +1036,50 @@ app.get('/api/admin/files', adminRequired, (req, res) => {
   res.json({ files: list });
 });
 
+// Helper to save base64 uploads as binary files on disk for fast streaming and download
+function saveBase64FileToDisk(dataUrl: string, originalName: string, mimeType?: string): { url: string; size: number } {
+  if (dataUrl && dataUrl.startsWith('data:')) {
+    try {
+      const commaIdx = dataUrl.indexOf(',');
+      if (commaIdx !== -1) {
+        const header = dataUrl.substring(0, commaIdx);
+        const base64Data = dataUrl.substring(commaIdx + 1);
+        const detectedMime = header.match(/:(.*?);/)?.[1] || mimeType || '';
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        let ext = path.extname(originalName).toLowerCase();
+        if (!ext) {
+          if (detectedMime.includes('audio/mpeg') || detectedMime.includes('mp3')) ext = '.mp3';
+          else if (detectedMime.includes('audio/wav')) ext = '.wav';
+          else if (detectedMime.includes('audio/m4a') || detectedMime.includes('mp4a') || detectedMime.includes('audio/aac')) ext = '.m4a';
+          else if (detectedMime.includes('audio/ogg')) ext = '.ogg';
+          else if (detectedMime.includes('video/mp4')) ext = '.mp4';
+          else if (detectedMime.includes('video/webm')) ext = '.webm';
+          else if (detectedMime.includes('video/quicktime')) ext = '.mov';
+          else if (detectedMime.includes('image/jpeg')) ext = '.jpg';
+          else if (detectedMime.includes('image/png')) ext = '.png';
+          else if (detectedMime.includes('image/webp')) ext = '.webp';
+          else if (detectedMime.includes('application/pdf')) ext = '.pdf';
+          else ext = '.bin';
+        }
+
+        const safeBase = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_\u0900-\u097F-]/g, '_').substring(0, 40) || 'file';
+        const uniqueName = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}_${safeBase}${ext}`;
+        const filePath = path.join(UPLOADS_DIR, uniqueName);
+        fs.writeFileSync(filePath, buffer);
+
+        return {
+          url: `/uploads/${uniqueName}`,
+          size: buffer.length,
+        };
+      }
+    } catch (e) {
+      console.error('Failed to save file to disk:', e);
+    }
+  }
+  return { url: dataUrl, size: 0 };
+}
+
 app.post('/api/admin/upload', adminRequired, (req, res) => {
   const { name, dataUrl, mimeType, size, category, description, type } = req.body;
   if (!dataUrl || !name) {
@@ -967,6 +1101,9 @@ app.post('/api/admin/upload', adminRequired, (req, res) => {
     determinedType = 'document';
   }
 
+  // Save to disk to avoid giant base64 strings in db.json
+  const saved = saveBase64FileToDisk(dataUrl, name, mimeType);
+
   const data = db.getData();
   if (!data.uploadedFiles) {
     data.uploadedFiles = [];
@@ -977,8 +1114,8 @@ app.post('/api/admin/upload', adminRequired, (req, res) => {
     name: name.trim(),
     type: determinedType,
     mimeType: mimeType || 'application/octet-stream',
-    size: size || (typeof dataUrl === 'string' ? Math.round(dataUrl.length * 0.75) : 0),
-    url: dataUrl,
+    size: saved.size || size || (typeof dataUrl === 'string' ? Math.round(dataUrl.length * 0.75) : 0),
+    url: saved.url,
     category: category || 'General Upload',
     description: description || '',
     uploadedAt: new Date().toISOString(),
@@ -990,6 +1127,55 @@ app.post('/api/admin/upload', adminRequired, (req, res) => {
 
   res.status(201).json({
     message: 'फ़ाइल सफलतापूर्वक अपलोड हो गई है (File uploaded successfully).',
+    file: newFile,
+  });
+});
+
+// Member & Church file upload endpoint for user songs, videos, photos, and documents
+app.post('/api/upload', (req, res) => {
+  const { name, dataUrl, mimeType, size, category, description, type } = req.body;
+  if (!dataUrl || !name) {
+    res.status(400).json({ error: 'File data and file name are required for upload.' });
+    return;
+  }
+
+  let determinedType: 'audio' | 'video' | 'image' | 'document' | 'other' = type || 'other';
+  const cleanMime = (mimeType || '').toLowerCase();
+  const cleanName = (name || '').toLowerCase();
+
+  if (cleanMime.startsWith('audio/') || cleanName.endsWith('.mp3') || cleanName.endsWith('.wav') || cleanName.endsWith('.m4a') || cleanName.endsWith('.aac')) {
+    determinedType = 'audio';
+  } else if (cleanMime.startsWith('video/') || cleanName.endsWith('.mp4') || cleanName.endsWith('.mov') || cleanName.endsWith('.webm') || cleanName.endsWith('.mkv')) {
+    determinedType = 'video';
+  } else if (cleanMime.startsWith('image/') || cleanName.endsWith('.jpg') || cleanName.endsWith('.jpeg') || cleanName.endsWith('.png') || cleanName.endsWith('.webp')) {
+    determinedType = 'image';
+  } else if (cleanMime.includes('pdf') || cleanName.endsWith('.pdf')) {
+    determinedType = 'document';
+  }
+
+  const saved = saveBase64FileToDisk(dataUrl, name, mimeType);
+
+  const data = db.getData();
+  if (!data.uploadedFiles) data.uploadedFiles = [];
+
+  const newFile = {
+    id: `file_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    name: name.trim(),
+    type: determinedType,
+    mimeType: mimeType || 'application/octet-stream',
+    size: saved.size || size || 0,
+    url: saved.url,
+    category: category || 'Community Media',
+    description: description || '',
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: 'Fellowship Contributor',
+  };
+
+  data.uploadedFiles.unshift(newFile);
+  db.save();
+
+  res.status(201).json({
+    message: 'फ़ाइल सफलतापूर्वक अपलोड हो गई है (Uploaded successfully).',
     file: newFile,
   });
 });
@@ -1022,6 +1208,15 @@ app.get('/api/download', async (req, res) => {
   }
 
   try {
+    // If it's a locally stored upload file
+    if (fileUrl.startsWith('/uploads/')) {
+      const localPath = path.join(UPLOADS_DIR, path.basename(fileUrl));
+      if (fs.existsSync(localPath)) {
+        res.download(localPath, filename);
+        return;
+      }
+    }
+
     // If it's a data URI (base64)
     if (fileUrl.startsWith('data:')) {
       const parts = fileUrl.split(',');

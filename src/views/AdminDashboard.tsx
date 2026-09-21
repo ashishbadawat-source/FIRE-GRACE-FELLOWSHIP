@@ -254,10 +254,10 @@ export const AdminDashboard: React.FC = () => {
   ) => {
     if (!file) return;
 
-    // Check size limit (e.g. 50MB)
-    const MAX_SIZE = 50 * 1024 * 1024;
+    // Check size limit (up to 150MB)
+    const MAX_SIZE = 150 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
-      alert(`फ़ाइल का आकार 50MB से कम होना चाहिए। आपकी फाइल: ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
+      alert(`फ़ाइल का आकार 150MB से कम होना चाहिए। आपकी फाइल: ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
       return;
     }
 
