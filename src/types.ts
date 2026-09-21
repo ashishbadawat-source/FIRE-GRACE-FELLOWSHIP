@@ -112,6 +112,19 @@ export interface AudioSong {
   featured?: boolean;
 }
 
+export interface UploadedFileItem {
+  id: string;
+  name: string;
+  type: 'audio' | 'video' | 'image' | 'document' | 'other';
+  mimeType: string;
+  size: number;
+  url: string;
+  category?: string;
+  uploadedAt: string;
+  uploadedBy?: string;
+  description?: string;
+}
+
 export interface LiveStreamConfig {
   isLive: boolean;
   title: string;

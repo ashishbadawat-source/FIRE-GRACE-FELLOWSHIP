@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
@@ -18,10 +18,25 @@ export const firebaseConfig = {
 // Initialize Firebase safely
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
 export const db = firebaseConfig.firestoreDatabaseId
   ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
 
+// Helper for Google Sign In via Firebase Popup
+export async function signInWithGooglePopup() {
+  try {
+    console.log('[Firebase Auth] Triggering Google Sign-In popup...');
+    const result = await signInWithPopup(auth, googleProvider);
+    console.log('[Firebase Auth] Google Sign-In success:', result.user.email);
+    return { success: true, user: result.user };
+  } catch (error: any) {
+    console.error('[Firebase Auth] Google Sign-In failed:', error.code, error.message);
+    return { success: false, error: error.message || 'Google Sign-In was cancelled or failed.' };
+  }
+}
 
 // Initialize Analytics conditionally when in supported browser environment
 export let analytics: ReturnType<typeof getAnalytics> | null = null;
@@ -29,6 +44,7 @@ if (typeof window !== 'undefined') {
   isSupported().then((supported) => {
     if (supported) {
       analytics = getAnalytics(app);
+      console.log('[Firebase Analytics] Initialized');
     }
   }).catch(() => {
     // Analytics not supported in some sandboxed iframes

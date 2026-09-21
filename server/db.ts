@@ -59,6 +59,7 @@ interface DatabaseSchema {
   bibleBookmarks: BibleBookmark[];
   donations: DonationRecord[];
   paymentDetails: ChurchPaymentDetails;
+  uploadedFiles: any[];
 }
 
 const DB_PATH = path.resolve(process.cwd(), 'database.json');
@@ -1074,6 +1075,44 @@ Jesus Christ, my living hope!`,
     bibleBookmarks,
     donations,
     paymentDetails,
+    uploadedFiles: [
+      {
+        id: 'file_001',
+        name: 'Sunday-Worship-Hymn-Book-2026.pdf',
+        type: 'document',
+        mimeType: 'application/pdf',
+        size: 2450000,
+        url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        category: 'Bulletin & Hymn Sheets',
+        uploadedAt: '2026-09-18T10:00:00.000Z',
+        uploadedBy: 'Ashish Badawat',
+        description: 'Official 2026 Fellowship Hymnal & Worship Order',
+      },
+      {
+        id: 'file_002',
+        name: 'Gospel-Praise-Track-Hindi.mp3',
+        type: 'audio',
+        mimeType: 'audio/mpeg',
+        size: 5800000,
+        url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        category: 'Audio Track',
+        uploadedAt: '2026-09-19T14:30:00.000Z',
+        uploadedBy: 'Ashish Badawat',
+        description: 'Anointing Worship MP3 Instrumental',
+      },
+      {
+        id: 'file_003',
+        name: 'Cathedral-Sanctuary-Altar-Photo.jpg',
+        type: 'image',
+        mimeType: 'image/jpeg',
+        size: 1850000,
+        url: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&auto=format&fit=crop&q=80',
+        category: 'Sanctuary Photos',
+        uploadedAt: '2026-09-20T08:15:00.000Z',
+        uploadedBy: 'Ashish Badawat',
+        description: 'Main altar and worship stage photography',
+      },
+    ],
   };
 }
 
@@ -1098,6 +1137,9 @@ class Database {
         }
         if (!parsed.paymentDetails) {
           parsed.paymentDetails = initial.paymentDetails;
+        }
+        if (!parsed.uploadedFiles) {
+          parsed.uploadedFiles = initial.uploadedFiles;
         }
         // Ensure default leadership accounts (Ashish, Aniket, Admin, Grace, Joshua) are present
         if (!parsed.users || parsed.users.length === 0) {

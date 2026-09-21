@@ -14,8 +14,8 @@ import type { UserProfile } from './src/types';
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Token generation and verification helper
 const TOKEN_SECRET = 'fgf_holy_fire_secret_key_2026';
@@ -923,6 +923,83 @@ app.delete('/api/admin/videos/:id', adminRequired, (req, res) => {
   data.videos = data.videos.filter(v => v.id !== req.params.id);
   db.save();
   res.json({ message: 'Video deleted.' });
+});
+
+// -------------------------------------------------------------------------
+// 6.5 FILE UPLOAD & MEDIA STORAGE (फ़ाइल अपलोड एवं मीडिया केंद्र)
+// -------------------------------------------------------------------------
+
+app.get('/api/admin/files', adminRequired, (req, res) => {
+  const { type, search } = req.query;
+  const data = db.getData();
+  if (!data.uploadedFiles) {
+    data.uploadedFiles = [];
+  }
+  let list = [...data.uploadedFiles];
+  if (type && type !== 'all') {
+    list = list.filter(f => f.type === type);
+  }
+  if (search && typeof search === 'string') {
+    const q = search.toLowerCase();
+    list = list.filter(f => f.name.toLowerCase().includes(q) || (f.category && f.category.toLowerCase().includes(q)));
+  }
+  res.json({ files: list });
+});
+
+app.post('/api/admin/upload', adminRequired, (req, res) => {
+  const { name, dataUrl, mimeType, size, category, description, type } = req.body;
+  if (!dataUrl || !name) {
+    res.status(400).json({ error: 'File data and file name are required for upload.' });
+    return;
+  }
+
+  let determinedType: 'audio' | 'video' | 'image' | 'document' | 'other' = type || 'other';
+  const cleanMime = (mimeType || '').toLowerCase();
+  const cleanName = (name || '').toLowerCase();
+
+  if (cleanMime.startsWith('audio/') || cleanName.endsWith('.mp3') || cleanName.endsWith('.wav') || cleanName.endsWith('.m4a') || cleanName.endsWith('.aac')) {
+    determinedType = 'audio';
+  } else if (cleanMime.startsWith('video/') || cleanName.endsWith('.mp4') || cleanName.endsWith('.mov') || cleanName.endsWith('.webm') || cleanName.endsWith('.mkv')) {
+    determinedType = 'video';
+  } else if (cleanMime.startsWith('image/') || cleanName.endsWith('.jpg') || cleanName.endsWith('.jpeg') || cleanName.endsWith('.png') || cleanName.endsWith('.webp') || cleanName.endsWith('.gif')) {
+    determinedType = 'image';
+  } else if (cleanMime.includes('pdf') || cleanMime.includes('document') || cleanMime.includes('word') || cleanName.endsWith('.pdf') || cleanName.endsWith('.doc') || cleanName.endsWith('.docx')) {
+    determinedType = 'document';
+  }
+
+  const data = db.getData();
+  if (!data.uploadedFiles) {
+    data.uploadedFiles = [];
+  }
+
+  const newFile = {
+    id: `file_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    name: name.trim(),
+    type: determinedType,
+    mimeType: mimeType || 'application/octet-stream',
+    size: size || (typeof dataUrl === 'string' ? Math.round(dataUrl.length * 0.75) : 0),
+    url: dataUrl,
+    category: category || 'General Upload',
+    description: description || '',
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: (req as any).user?.fullName || 'Senior Admin',
+  };
+
+  data.uploadedFiles.unshift(newFile);
+  db.save();
+
+  res.status(201).json({
+    message: 'फ़ाइल सफलतापूर्वक अपलोड हो गई है (File uploaded successfully).',
+    file: newFile,
+  });
+});
+
+app.delete('/api/admin/files/:id', adminRequired, (req, res) => {
+  const data = db.getData();
+  if (!data.uploadedFiles) data.uploadedFiles = [];
+  data.uploadedFiles = data.uploadedFiles.filter(f => f.id !== req.params.id);
+  db.save();
+  res.json({ message: 'File removed from repository.' });
 });
 
 // -------------------------------------------------------------------------

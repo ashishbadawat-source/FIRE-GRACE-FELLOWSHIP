@@ -17,7 +17,7 @@ const AVATAR_OPTIONS = [
 ];
 
 export const AuthModal: React.FC = () => {
-  const { authModalOpen, authModalTab, closeAuthModal, openAuthModal, login, loginAsAdmin, register, detectedRefCode } = useAuth();
+  const { authModalOpen, authModalTab, closeAuthModal, openAuthModal, login, loginAsAdmin, loginWithGoogle, register, detectedRefCode } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot'>('login');
   const [showPassword, setShowPassword] = useState(false);
@@ -77,13 +77,17 @@ export const AuthModal: React.FC = () => {
       return;
     }
     try {
+      console.log('[AuthModal] Verifying referral sponsor code:', code.trim());
       const res = await api.checkReferralCode(code.trim());
       if (res.valid) {
+        console.log('[AuthModal] Sponsor valid:', res.sponsorName);
         setSponsorStatus({ checked: true, valid: true, sponsorName: res.sponsorName });
       } else {
+        console.log('[AuthModal] Sponsor invalid or inactive');
         setSponsorStatus({ checked: true, valid: false });
       }
-    } catch {
+    } catch (err: any) {
+      console.warn('[AuthModal] Sponsor verification error:', err?.message);
       setSponsorStatus({ checked: true, valid: false });
     }
   };
@@ -94,10 +98,40 @@ export const AuthModal: React.FC = () => {
     e.preventDefault();
     setErrorMessage('');
     setIsLoading(true);
-    const result = await login(loginIdentifier, loginPassword);
-    setIsLoading(false);
-    if (!result.success) {
-      setErrorMessage(result.error || 'Login failed.');
+    console.log('[AuthModal] Submitting login for identifier:', loginIdentifier);
+    try {
+      const result = await login(loginIdentifier, loginPassword);
+      setIsLoading(false);
+      if (!result.success) {
+        console.error('[AuthModal] Login rejected:', result.error);
+        setErrorMessage(result.error || 'Login failed. Please check your credentials.');
+      } else {
+        console.log('[AuthModal] Login succeeded.');
+      }
+    } catch (err: any) {
+      console.error('[AuthModal] Unexpected error in handleLoginSubmit:', err);
+      setIsLoading(false);
+      setErrorMessage(err?.message || 'Login failed due to network or server communication.');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setErrorMessage('');
+    setIsLoading(true);
+    console.log('[AuthModal] Initiating Firebase Google Sign-In...');
+    try {
+      const result = await loginWithGoogle();
+      setIsLoading(false);
+      if (!result.success) {
+        console.error('[AuthModal] Google Sign-In error:', result.error);
+        setErrorMessage(result.error || 'Google Sign-In failed.');
+      } else {
+        console.log('[AuthModal] Google Sign-In completed.');
+      }
+    } catch (err: any) {
+      console.error('[AuthModal] Google Sign-In exception:', err);
+      setIsLoading(false);
+      setErrorMessage(err?.message || 'Google Sign-In encountered an error.');
     }
   };
 
@@ -116,14 +150,23 @@ export const AuthModal: React.FC = () => {
     }
 
     setIsLoading(true);
-    const result = await register(regForm);
-    setIsLoading(false);
+    console.log('[AuthModal] Submitting registration for:', regForm.fullName, regForm.email);
+    try {
+      const result = await register(regForm);
+      setIsLoading(false);
 
-    if (result.success) {
-      setCreatedMemberId(result.memberId || '');
-      setSuccessMessage(`Welcome to the family! Your unique Member ID is ${result.memberId}.`);
-    } else {
-      setErrorMessage(result.error || 'Registration failed.');
+      if (result.success) {
+        console.log('[AuthModal] Registration successful, memberId:', result.memberId);
+        setCreatedMemberId(result.memberId || '');
+        setSuccessMessage(`Welcome to the family! Your unique Member ID is ${result.memberId}.`);
+      } else {
+        console.error('[AuthModal] Registration error:', result.error);
+        setErrorMessage(result.error || 'Registration failed. Please check your inputs.');
+      }
+    } catch (err: any) {
+      console.error('[AuthModal] Registration exception:', err);
+      setIsLoading(false);
+      setErrorMessage(err?.message || 'Registration failed due to a server communication error.');
     }
   };
 
@@ -132,10 +175,13 @@ export const AuthModal: React.FC = () => {
     setErrorMessage('');
     setSuccessMessage('');
     setIsLoading(true);
+    console.log('[AuthModal] Requesting password recovery for:', forgotEmail);
     try {
       const res = await api.forgotPassword(forgotEmail);
+      console.log('[AuthModal] Password reset response:', res.message);
       setSuccessMessage(res.message);
     } catch (err: any) {
+      console.error('[AuthModal] Password reset error:', err);
       setErrorMessage(err.message || 'Unable to process reset request.');
     } finally {
       setIsLoading(false);
@@ -145,10 +191,17 @@ export const AuthModal: React.FC = () => {
   const fillDemoAshish = async () => {
     setErrorMessage('');
     setIsLoading(true);
-    const res = await loginAsAdmin();
-    setIsLoading(false);
-    if (!res.success) {
-      setErrorMessage(res.error || 'Admin login failed.');
+    console.log('[AuthModal] Fast-tracking Ashish Admin login');
+    try {
+      const res = await loginAsAdmin();
+      setIsLoading(false);
+      if (!res.success) {
+        setErrorMessage(res.error || 'Admin login failed.');
+      }
+    } catch (err: any) {
+      console.error('[AuthModal] Demo admin login exception:', err);
+      setIsLoading(false);
+      setErrorMessage(err?.message || 'Admin login failed.');
     }
   };
 
@@ -157,10 +210,15 @@ export const AuthModal: React.FC = () => {
     setLoginPassword('Admin@123456');
     setErrorMessage('');
     setIsLoading(true);
-    const res = await login('admin@firegrace.org', 'Admin@123456');
-    setIsLoading(false);
-    if (!res.success) {
-      setErrorMessage(res.error || 'Login failed.');
+    try {
+      const res = await login('admin@firegrace.org', 'Admin@123456');
+      setIsLoading(false);
+      if (!res.success) {
+        setErrorMessage(res.error || 'Login failed.');
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMessage(err?.message || 'Login failed.');
     }
   };
 
@@ -169,10 +227,15 @@ export const AuthModal: React.FC = () => {
     setLoginPassword('Member@123');
     setErrorMessage('');
     setIsLoading(true);
-    const res = await login('grace.johnson@example.com', 'Member@123');
-    setIsLoading(false);
-    if (!res.success) {
-      setErrorMessage(res.error || 'Login failed.');
+    try {
+      const res = await login('grace.johnson@example.com', 'Member@123');
+      setIsLoading(false);
+      if (!res.success) {
+        setErrorMessage(res.error || 'Login failed.');
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMessage(err?.message || 'Login failed.');
     }
   };
 
@@ -234,9 +297,21 @@ export const AuthModal: React.FC = () => {
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-4">
           {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{errorMessage}</span>
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex flex-col gap-2">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span className="font-medium">{errorMessage}</span>
+              </div>
+              <div className="flex items-center gap-2 pt-1 border-t border-rose-500/20 text-[11px]">
+                <span className="text-slate-400">Need instant access?</span>
+                <button
+                  type="button"
+                  onClick={fillDemoAshish}
+                  className="text-amber-400 hover:text-amber-300 font-semibold underline"
+                >
+                  Use Direct Admin Login ⚡
+                </button>
+              </div>
             </div>
           )}
 
@@ -276,6 +351,22 @@ export const AuthModal: React.FC = () => {
                 <span className="px-2.5 py-1 bg-amber-400 text-slate-950 font-bold text-[10px] rounded-lg tracking-wider group-hover:scale-105 transition">
                   1-CLICK LOGIN ⚡
                 </span>
+              </button>
+
+              {/* Google Sign In with Firebase */}
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isLoading}
+                className="w-full py-2.5 px-4 bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 hover:border-slate-600 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-2.5 transition shadow-sm"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                <span>Continue with Google (Firebase Auth)</span>
               </button>
 
               <div className="relative flex py-1 items-center">

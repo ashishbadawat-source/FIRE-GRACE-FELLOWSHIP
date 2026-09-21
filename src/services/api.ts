@@ -46,8 +46,19 @@ async function handleResponse<T>(res: Response): Promise<T> {
       const data = await res.json();
       errorMsg = data.error || data.message || errorMsg;
     } catch {
-      errorMsg = res.statusText || (res.status === 401 ? 'Invalid credentials.' : 'Server communication error.');
+      if (res.status === 401) {
+        errorMsg = 'Invalid credentials or session expired.';
+      } else if (res.status === 403) {
+        errorMsg = 'Access denied. Administrator authorization required.';
+      } else if (res.status === 404) {
+        errorMsg = 'Requested resource not found.';
+      } else if (res.status >= 500) {
+        errorMsg = 'Server is processing requests. Please retry in a moment.';
+      } else {
+        errorMsg = res.statusText || 'Unable to connect to server.';
+      }
     }
+    console.warn(`[API] Request to ${res.url} returned status ${res.status}:`, errorMsg);
     throw new Error(errorMsg);
   }
   return res.json();
@@ -288,6 +299,37 @@ export const api = {
 
   deleteVideo: (id: string) =>
     fetch(`${BASE_URL}/api/admin/videos/${id}`, {
+      method: 'DELETE',
+      headers: { ...getAuthHeader() },
+    }).then(r => handleResponse<{ message: string }>(r)),
+
+  // Files & Media Storage (फ़ाइल अपलोड एवं मीडिया प्रबंधन)
+  getAdminFiles: (type?: string, search?: string) => {
+    const params = new URLSearchParams();
+    if (type) params.append('type', type);
+    if (search) params.append('search', search);
+    return fetch(`${BASE_URL}/api/admin/files?${params.toString()}`, {
+      headers: { ...getAuthHeader() },
+    }).then(r => handleResponse<{ files: any[] }>(r));
+  },
+
+  uploadFile: (payload: {
+    name: string;
+    dataUrl: string;
+    mimeType?: string;
+    size?: number;
+    category?: string;
+    description?: string;
+    type?: string;
+  }) =>
+    fetch(`${BASE_URL}/api/admin/upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify(payload),
+    }).then(r => handleResponse<{ message: string; file: any }>(r)),
+
+  deleteAdminFile: (id: string) =>
+    fetch(`${BASE_URL}/api/admin/files/${id}`, {
       method: 'DELETE',
       headers: { ...getAuthHeader() },
     }).then(r => handleResponse<{ message: string }>(r)),

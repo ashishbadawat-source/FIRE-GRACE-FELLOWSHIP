@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Shield,
   Users,
@@ -35,6 +35,16 @@ import {
   Copy,
   Share2,
   Sparkles,
+  UploadCloud,
+  FolderUp,
+  File,
+  Film,
+  Image as ImageIcon,
+  Download,
+  Search,
+  HardDrive,
+  RefreshCw,
+  Eye,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -50,13 +60,14 @@ import type {
   PhotoItem,
   DonationRecord,
   ChurchPaymentDetails,
+  UploadedFileItem,
 } from '../types';
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'stats' | 'users' | 'sermons' | 'songs' | 'events' | 'live' | 'prayers' | 'meetings' | 'photos' | 'notify' | 'donations'
+    'stats' | 'files' | 'songs' | 'sermons' | 'photos' | 'donations' | 'users' | 'events' | 'live' | 'prayers' | 'meetings' | 'notify'
   >('stats');
 
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -71,6 +82,17 @@ export const AdminDashboard: React.FC = () => {
   const [donations, setDonations] = useState<DonationRecord[]>([]);
   const [paymentConfig, setPaymentConfig] = useState<ChurchPaymentDetails | null>(null);
   const [donationFilter, setDonationFilter] = useState<'all' | 'pending' | 'verified' | 'completed'>('all');
+
+  // File Upload Center State (फ़ाइल अपलोड केंद्र)
+  const [adminFiles, setAdminFiles] = useState<UploadedFileItem[]>([]);
+  const [fileFilterType, setFileFilterType] = useState<'all' | 'audio' | 'video' | 'image' | 'document'>('all');
+  const [fileSearch, setFileSearch] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadCategory, setUploadCategory] = useState('General Upload');
+  const [uploadDescription, setUploadDescription] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Church Payment Configuration form state
   const [gpayUpi, setGpayUpi] = useState('firegrace@okaxis');
@@ -90,7 +112,7 @@ export const AdminDashboard: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<string>('');
 
   // Form states
-  // New Sermon
+  // New Sermon / Video (वीडियो एवं प्रवचन)
   const [sermonTitle, setSermonTitle] = useState('');
   const [sermonSpeaker, setSermonSpeaker] = useState('Pastor David Emmanuel');
   const [sermonDate, setSermonDate] = useState(new Date().toISOString().split('T')[0]);
@@ -144,7 +166,7 @@ export const AdminDashboard: React.FC = () => {
   const [zoomPass, setZoomPass] = useState('FIRE2025');
   const [zoomDesc, setZoomDesc] = useState('');
 
-  // New Photo
+  // New Photo (फोटो)
   const [photoTitle, setPhotoTitle] = useState('');
   const [photoUrl, setPhotoUrl] = useState('https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=800&auto=format&fit=crop&q=80');
   const [photoAlbumId, setPhotoAlbumId] = useState('album-1');
@@ -169,7 +191,7 @@ export const AdminDashboard: React.FC = () => {
 
   const loadAllAdminData = async () => {
     try {
-      const [sRes, uRes, smRes, sngRes, evRes, prRes, lvRes, zmRes, phRes, donRes, payRes] = await Promise.all([
+      const [sRes, uRes, smRes, sngRes, evRes, prRes, lvRes, zmRes, phRes, donRes, payRes, filRes] = await Promise.all([
         api.getAdminStats(),
         api.getAdminUsers(),
         api.getSermons('All'),
@@ -181,6 +203,7 @@ export const AdminDashboard: React.FC = () => {
         api.getPhotos(),
         api.getAdminDonations(),
         api.getPaymentDetails(),
+        api.getAdminFiles(),
       ]);
       setStats(sRes as any);
       setUsers(uRes.users);
@@ -199,6 +222,7 @@ export const AdminDashboard: React.FC = () => {
       setZoomMeetings(zmRes.meetings);
       setPhotos(phRes.photos);
       setDonations(donRes.donations || []);
+      setAdminFiles(filRes?.files || []);
       if (payRes.paymentDetails) {
         setPaymentConfig(payRes.paymentDetails);
         setGpayUpi(payRes.paymentDetails.googlePay?.upiId || 'firegrace@okaxis');
@@ -217,6 +241,115 @@ export const AdminDashboard: React.FC = () => {
       }
     } catch {
       // ignore
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // DIRECT FILE UPLOAD HANDLER (ऑडियो, वीडियो, फोटो, डॉक्युमेंट्स डायरेक्ट अपलोड)
+  // -------------------------------------------------------------------------
+  const handleDirectFileUpload = async (
+    file: File,
+    targetContext: 'song_audio' | 'song_cover' | 'sermon_video' | 'sermon_audio' | 'sermon_thumb' | 'photo' | 'event_banner' | 'general' = 'general',
+    customCategory?: string
+  ) => {
+    if (!file) return;
+
+    // Check size limit (e.g. 50MB)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      alert(`फ़ाइल का आकार 50MB से कम होना चाहिए। आपकी फाइल: ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
+      return;
+    }
+
+    setIsUploading(true);
+    showNotification(`फ़ाइल अपलोड हो रही है: ${file.name}...`);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+
+        let categoryTag = customCategory || uploadCategory;
+        if (targetContext === 'song_audio') categoryTag = 'Worship Audio Song';
+        if (targetContext === 'song_cover') categoryTag = 'Song Cover Art';
+        if (targetContext === 'sermon_video') categoryTag = 'Sermon Video Recording';
+        if (targetContext === 'sermon_audio') categoryTag = 'Sermon Audio Recording';
+        if (targetContext === 'photo') categoryTag = 'Church Photo Gallery';
+        if (targetContext === 'event_banner') categoryTag = 'Church Event Banner';
+
+        const res = await api.uploadFile({
+          name: file.name,
+          dataUrl,
+          mimeType: file.type,
+          size: file.size,
+          category: categoryTag,
+          description: uploadDescription || `Uploaded via Admin Console for ${targetContext}`,
+        });
+
+        const uploadedUrl = res.file?.url || dataUrl;
+
+        // Auto-assign to corresponding form inputs
+        if (targetContext === 'song_audio') {
+          setSongAudioUrl(uploadedUrl);
+          if (!songTitle) {
+            setSongTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+          }
+          showNotification(`🎵 ऑडियो गीत "${file.name}" सफलतापूर्वक अपलोड हो गया!`);
+        } else if (targetContext === 'song_cover') {
+          setSongCover(uploadedUrl);
+          showNotification(`🖼️ गीत कवर फोटो सफलतापूर्वक अपलोड हो गई!`);
+        } else if (targetContext === 'sermon_video') {
+          setSermonYoutube(uploadedUrl);
+          if (!sermonTitle) {
+            setSermonTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+          }
+          showNotification(`🎬 वीडियो प्रवचन "${file.name}" सफलतापूर्वक अपलोड हो गया!`);
+        } else if (targetContext === 'sermon_audio') {
+          setSermonAudioUrl(uploadedUrl);
+          showNotification(`🎙️ प्रवचन ऑडियो MP3 सफलतापूर्वक अपलोड हो गया!`);
+        } else if (targetContext === 'sermon_thumb') {
+          setSermonThumb(uploadedUrl);
+          showNotification(`🖼️ वीडियो थंबनेल सफलतापूर्वक अपलोड हो गया!`);
+        } else if (targetContext === 'photo') {
+          setPhotoUrl(uploadedUrl);
+          if (!photoTitle) {
+            setPhotoTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+          }
+          showNotification(`📸 फोटो "${file.name}" सफलतापूर्वक अपलोड हो गई!`);
+        } else if (targetContext === 'event_banner') {
+          setEventBanner(uploadedUrl);
+          showNotification(`🖼️ इवेंट बैनर सफलतापूर्वक अपलोड हो गया!`);
+        } else {
+          showNotification(`📁 फ़ाइल "${file.name}" सफलतापूर्वक अपलोड हो गई!`);
+        }
+
+        // Refresh admin files
+        const fRes = await api.getAdminFiles();
+        setAdminFiles(fRes.files || []);
+        setIsUploading(false);
+      };
+
+      reader.onerror = () => {
+        setIsUploading(false);
+        alert('फ़ाइल पढ़ने में त्रुटि आई। कृपया पुनः प्रयास करें।');
+      };
+
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setIsUploading(false);
+      alert(err.message || 'फ़ाइल अपलोड करने में विफल');
+    }
+  };
+
+  const handleDeleteUploadedFile = async (id: string) => {
+    if (!confirm('क्या आप निश्चित रूप से इस फाइल को हटाना चाहते हैं?')) return;
+    try {
+      await api.deleteAdminFile(id);
+      showNotification('फ़ाइल हटा दी गई।');
+      const fRes = await api.getAdminFiles();
+      setAdminFiles(fRes.files || []);
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete file');
     }
   };
 
@@ -535,19 +668,97 @@ export const AdminDashboard: React.FC = () => {
         )}
       </div>
 
+      {/* Quick Media & Upload Action Hub */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+        <div className="flex items-center gap-2">
+          <FolderUp className="w-5 h-5 text-amber-400 shrink-0" />
+          <span className="text-xs font-bold text-white uppercase tracking-wider">त्वरित एडमिन अपलोड हब (Quick Upload Actions):</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold transition shadow-md">
+            <UploadCloud className="w-3.5 h-3.5" />
+            <span>{isUploading ? 'अपलोड हो रहा है...' : '📁 कोई भी फ़ाइल अपलोड करें (Upload File)'}</span>
+            <input
+              type="file"
+              className="hidden"
+              disabled={isUploading}
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) handleDirectFileUpload(file, 'general');
+              }}
+            />
+          </label>
+
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold transition shadow-md">
+            <Music className="w-3.5 h-3.5" />
+            <span>🎵 ऑडियो गीत MP3</span>
+            <input
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              disabled={isUploading}
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleDirectFileUpload(file, 'song_audio');
+                  setActiveTab('songs');
+                }
+              }}
+            />
+          </label>
+
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition shadow-md">
+            <Video className="w-3.5 h-3.5" />
+            <span>🎬 वीडियो / प्रवचन</span>
+            <input
+              type="file"
+              accept="video/*"
+              className="hidden"
+              disabled={isUploading}
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleDirectFileUpload(file, 'sermon_video');
+                  setActiveTab('sermons');
+                }
+              }}
+            />
+          </label>
+
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-md">
+            <Camera className="w-3.5 h-3.5" />
+            <span>📸 फोटो गैलरी</span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={isUploading}
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleDirectFileUpload(file, 'photo');
+                  setActiveTab('photos');
+                }
+              }}
+            />
+          </label>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
         {[
           { id: 'stats', label: 'Dashboard & Metrics', icon: Shield },
+          { id: 'files', label: `📁 फ़ाइल अपलोड (${adminFiles.length})`, icon: FolderUp },
+          { id: 'songs', label: `🎵 ऑडियो गीत (${adminSongs.length})`, icon: Music },
+          { id: 'sermons', label: `🎬 वीडियो व प्रवचन (${sermons.length})`, icon: Video },
+          { id: 'photos', label: `📸 फोटो गैलरी (${photos.length})`, icon: Camera },
           { id: 'donations', label: `Giving & Tithes (${donations.length})`, icon: CreditCard },
           { id: 'users', label: `Members (${users.length})`, icon: Users },
-          { id: 'sermons', label: `Sermons (${sermons.length})`, icon: Video },
-          { id: 'songs', label: `ऑडियो गीत (${adminSongs.length})`, icon: Music },
           { id: 'events', label: `Events (${events.length})`, icon: Calendar },
           { id: 'live', label: 'Live Stream Setup', icon: Radio },
           { id: 'prayers', label: `Prayers & Altar (${prayers.length})`, icon: Heart },
           { id: 'meetings', label: 'Zoom & Meet Gatherings', icon: Users },
-          { id: 'photos', label: 'Photo Gallery', icon: Camera },
           { id: 'notify', label: 'Broadcast Announcements', icon: Bell },
         ].map(tab => {
           const Icon = tab.icon;
@@ -567,6 +778,339 @@ export const AdminDashboard: React.FC = () => {
           );
         })}
       </div>
+
+      {/* ---------------- FILES & MEDIA STORAGE TAB (फ़ाइल अपलोड एवं मीडिया प्रबंधन) ---------------- */}
+      {activeTab === 'files' && (
+        <div className="space-y-6">
+          {/* Header & Stats Banner */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold font-cinzel text-white flex items-center gap-2">
+                <FolderUp className="w-6 h-6 text-amber-400" /> फ़ाइल अपलोड एवं मीडिया स्टोरेज (Admin File & Media Vault)
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                गीत (MP3), वीडियो प्रवचन (MP4), चर्च फोटो (JPG/PNG), और बुलेटिन/डॉक्युमेंट्स (PDF) को सीधे अपलोड करें और ऐप में उपयोग करें।
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={loadAllAdminData}
+                className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5 text-xs font-semibold"
+                title="रिफ्रेश करें"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>रिफ्रेश</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Upload Box (Col 5) */}
+            <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5">
+              <h3 className="font-cinzel text-base font-bold text-white flex items-center gap-2">
+                <UploadCloud className="w-5 h-5 text-amber-400" /> नई फ़ाइल अपलोड करें (Upload New File)
+              </h3>
+
+              {/* Drag & Drop Area */}
+              <div
+                onDragOver={e => {
+                  e.preventDefault();
+                  setIsDragOver(true);
+                }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={e => {
+                  e.preventDefault();
+                  setIsDragOver(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleDirectFileUpload(file, 'general');
+                }}
+                className={`border-2 border-dashed rounded-2xl p-6 text-center transition flex flex-col items-center justify-center gap-3 ${
+                  isDragOver
+                    ? 'border-amber-400 bg-amber-500/10'
+                    : 'border-slate-700 hover:border-slate-600 bg-slate-950/60'
+                }`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                  <UploadCloud className="w-7 h-7" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">फ़ाइल यहाँ खींचें और छोड़ें (Drag & Drop)</p>
+                  <p className="text-xs text-slate-400 mt-1">ऑडियो MP3, वीडियो MP4, फोटो JPG/PNG, या PDF दस्तावेज़</p>
+                </div>
+
+                <label className="cursor-pointer px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold transition shadow-md">
+                  <span>{isUploading ? 'अपलोड हो रहा है...' : 'कंप्यूटर / फोन से फ़ाइल चुनें (Browse File)'}</span>
+                  <input
+                    type="file"
+                    disabled={isUploading}
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handleDirectFileUpload(file, 'general');
+                    }}
+                  />
+                </label>
+                <span className="text-[10px] text-slate-500">अधिकतम आकार: 50 MB प्रति फ़ाइल</span>
+              </div>
+
+              {/* Upload Configuration */}
+              <div className="space-y-3 text-xs pt-2">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-semibold">श्रेणी (Category Tag)</label>
+                  <select
+                    value={uploadCategory}
+                    onChange={e => setUploadCategory(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
+                  >
+                    <option value="General Upload">सामान्य अपलोड (General Media)</option>
+                    <option value="Worship Audio Song">ऑडियो गीत (Worship Audio Song MP3)</option>
+                    <option value="Sermon Video Recording">वीडियो प्रवचन (Sermon Video Recording MP4)</option>
+                    <option value="Church Photo Gallery">चर्च फोटो (Church Photo Gallery JPG/PNG)</option>
+                    <option value="Church Bulletin & PDF">चर्च बुलेटिन / PDF दस्तावेज़ (Church Document)</option>
+                    <option value="Event Banner">इवेंट पोस्टर व बैनर (Event Poster/Banner)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 mb-1 font-semibold">विवरण / नोट (Description - Optional)</label>
+                  <input
+                    type="text"
+                    value={uploadDescription}
+                    onChange={e => setUploadDescription(e.target.value)}
+                    placeholder="उदा. संडे सर्विस क्लिप, आराधना गीत MP3..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Supported Media Types Cards */}
+              <div className="grid grid-cols-2 gap-2 pt-2 text-[11px]">
+                <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center gap-2">
+                  <Music className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-white block">ऑडियो गीत</span>
+                    <span className="text-[10px] text-slate-400">MP3, WAV, M4A</span>
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center gap-2">
+                  <Video className="w-4 h-4 text-rose-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-white block">वीडियो प्रवचन</span>
+                    <span className="text-[10px] text-slate-400">MP4, WebM, MOV</span>
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-white block">फोटो व बैनर</span>
+                    <span className="text-[10px] text-slate-400">JPG, PNG, WebP</span>
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-white block">दस्तावेज़ व PDF</span>
+                    <span className="text-[10px] text-slate-400">PDF, DOCX, TXT</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Uploaded Files Repository (Col 7) */}
+            <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h3 className="font-cinzel text-lg font-bold text-white flex items-center gap-2">
+                  <HardDrive className="w-5 h-5 text-amber-400" /> अपलोड की गई फ़ाइलें ({adminFiles.length})
+                </h3>
+
+                {/* Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                  {(['all', 'audio', 'video', 'image', 'document'] as const).map(fType => (
+                    <button
+                      key={fType}
+                      type="button"
+                      onClick={() => setFileFilterType(fType)}
+                      className={`px-2.5 py-1 rounded-lg font-semibold capitalize transition ${
+                        fileFilterType === fType
+                          ? 'bg-amber-500 text-slate-950'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {fType === 'all' && 'सभी'}
+                      {fType === 'audio' && '🎵 ऑडियो'}
+                      {fType === 'video' && '🎬 वीडियो'}
+                      {fType === 'image' && '📸 फोटो'}
+                      {fType === 'document' && '📄 दस्तावेज'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={fileSearch}
+                  onChange={e => setFileSearch(e.target.value)}
+                  placeholder="फ़ाइल का नाम या श्रेणी खोजें..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500"
+                />
+              </div>
+
+              {/* Files List */}
+              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                {adminFiles
+                  .filter(f => {
+                    const matchType = fileFilterType === 'all' || f.type === fileFilterType;
+                    const matchSearch =
+                      !fileSearch ||
+                      f.name?.toLowerCase().includes(fileSearch.toLowerCase()) ||
+                      f.category?.toLowerCase().includes(fileSearch.toLowerCase()) ||
+                      f.description?.toLowerCase().includes(fileSearch.toLowerCase());
+                    return matchType && matchSearch;
+                  })
+                  .map(file => {
+                    const formattedSize = file.size
+                      ? file.size > 1024 * 1024
+                        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+                        : `${(file.size / 1024).toFixed(0)} KB`
+                      : 'File';
+
+                    return (
+                      <div
+                        key={file.id}
+                        className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Type Icon / Thumbnail */}
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-900 border border-slate-800 shrink-0 flex items-center justify-center">
+                            {file.type === 'image' && (
+                              <img src={file.url} alt={file.name} className="w-full h-full object-cover" />
+                            )}
+                            {file.type === 'audio' && <Music className="w-5 h-5 text-cyan-400" />}
+                            {file.type === 'video' && <Video className="w-5 h-5 text-rose-400" />}
+                            {file.type === 'document' && <FileText className="w-5 h-5 text-amber-400" />}
+                          </div>
+
+                          {/* File Details */}
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-bold text-white truncate">{file.name}</h4>
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-semibold text-[10px]">
+                                {file.category || file.type}
+                              </span>
+                              <span className="font-mono">{formattedSize}</span>
+                              <span className="text-slate-500">• {new Date(file.uploadedAt || Date.now()).toLocaleDateString()}</span>
+                            </div>
+                            {file.description && (
+                              <p className="text-[10px] text-slate-400 truncate mt-0.5">{file.description}</p>
+                            )}
+
+                            {/* Inline Audio Player for MP3 files */}
+                            {file.type === 'audio' && (
+                              <div className="mt-2">
+                                <audio controls className="w-full h-7 rounded-lg">
+                                  <source src={file.url} type={file.mimeType || 'audio/mpeg'} />
+                                  Your browser does not support audio playback.
+                                </audio>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-end sm:self-center">
+                          {/* Copy Link */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(file.url);
+                              showNotification('फ़ाइल URL क्लिपबोर्ड पर कॉपी हो गया!');
+                            }}
+                            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1 text-[11px]"
+                            title="URL कॉपी करें"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Copy URL</span>
+                          </button>
+
+                          {/* Direct convert buttons */}
+                          {file.type === 'audio' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSongAudioUrl(file.url);
+                                setSongTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+                                setActiveTab('songs');
+                                showNotification('गीत फॉर्म में ऑडियो सेट किया गया!');
+                              }}
+                              className="px-2 py-1 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/40 text-[11px] font-semibold transition"
+                              title="इस MP3 से गीत बनाएं"
+                            >
+                              + गीत बनाएं
+                            </button>
+                          )}
+
+                          {file.type === 'video' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSermonYoutube(file.url);
+                                setSermonTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+                                setActiveTab('sermons');
+                                showNotification('प्रवचन वीडियो सेट किया गया!');
+                              }}
+                              className="px-2 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/40 text-[11px] font-semibold transition"
+                              title="इस वीडियो से प्रवचन जोड़ें"
+                            >
+                              + वीडियो जोड़ें
+                            </button>
+                          )}
+
+                          {file.type === 'image' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPhotoUrl(file.url);
+                                setPhotoTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+                                setActiveTab('photos');
+                                showNotification('फोटो गैलरी फॉर्म में इमेज सेट की गई!');
+                              }}
+                              className="px-2 py-1 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/40 text-[11px] font-semibold transition"
+                              title="गैलरी में जोड़ें"
+                            >
+                              + गैलरी में जोड़ें
+                            </button>
+                          )}
+
+                          {/* Delete Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUploadedFile(file.id)}
+                            className="p-2 rounded-lg bg-rose-950/50 hover:bg-rose-900 text-rose-300 transition"
+                            title="फ़ाइल हटाएं"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                {adminFiles.length === 0 && (
+                  <div className="py-12 text-center text-slate-400 text-xs space-y-2">
+                    <FolderUp className="w-8 h-8 text-slate-600 mx-auto" />
+                    <p>अभी तक कोई फ़ाइल अपलोड नहीं की गई है।</p>
+                    <p className="text-slate-500 text-[11px]">ऊपर दिए गए बॉक्स से पहली फ़ाइल अपलोड करें।</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---------------- STATS TAB ---------------- */}
       {activeTab === 'stats' && stats && (
@@ -847,18 +1391,50 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">YouTube Video URL / Embed Link</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-300">YouTube Video URL / Embed Link</label>
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-semibold transition">
+                    <UploadCloud className="w-3.5 h-3.5 text-rose-400" />
+                    <span>{isUploading ? 'अपलोड हो रहा है...' : '📁 वीडियो फ़ाइल अपलोड करें'}</span>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      disabled={isUploading}
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleDirectFileUpload(file, 'sermon_video');
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="url"
                   value={sermonYoutube}
                   onChange={e => setSermonYoutube(e.target.value)}
-                  placeholder="https://www.youtube.com/embed/..."
+                  placeholder="https://www.youtube.com/embed/... या अपलोड किया गया वीडियो"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Audio Recording URL (वचन का ऑडियो लिंक - MP3)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-300">Audio Recording URL (वचन का ऑडियो लिंक - MP3)</label>
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 rounded-lg text-[11px] font-semibold transition">
+                    <UploadCloud className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>{isUploading ? 'अपलोड हो रहा है...' : '🎙️ ऑडियो MP3 अपलोड करें'}</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      disabled={isUploading}
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleDirectFileUpload(file, 'sermon_audio');
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="url"
                   value={sermonAudioUrl}
@@ -869,7 +1445,23 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Thumbnail Image URL</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-300">Thumbnail Image URL</label>
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[11px] font-semibold transition">
+                    <UploadCloud className="w-3.5 h-3.5 text-amber-400" />
+                    <span>🖼️ थंबनेल अपलोड करें</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploading}
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleDirectFileUpload(file, 'sermon_thumb');
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="url"
                   value={sermonThumb}
@@ -1026,13 +1618,29 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">ऑडियो लिंक (MP3 Audio URL) *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-300">ऑडियो लिंक (MP3 Audio URL) *</label>
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-lg text-[11px] font-semibold transition">
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>{isUploading ? 'अपलोड हो रहा है...' : '📁 MP3 ऑडियो फ़ाइल अपलोड करें'}</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      disabled={isUploading}
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleDirectFileUpload(file, 'song_audio');
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="url"
                   required
                   value={songAudioUrl}
                   onChange={e => setSongAudioUrl(e.target.value)}
-                  placeholder="https://.../song.mp3"
+                  placeholder="https://.../song.mp3 या ऊपर से सीधे MP3 अपलोड करें"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs"
                 />
                 {/* Quick samples buttons */}
@@ -1056,7 +1664,23 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">कवर इमेज URL (Cover Image)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-300">कवर इमेज URL (Cover Image)</label>
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[11px] font-semibold transition">
+                    <UploadCloud className="w-3.5 h-3.5 text-amber-400" />
+                    <span>🖼️ कवर फोटो अपलोड करें</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploading}
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleDirectFileUpload(file, 'song_cover');
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="url"
                   value={songCover}
@@ -1285,7 +1909,23 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Banner Image URL</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-300">Banner Image URL</label>
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[11px] font-semibold transition">
+                    <UploadCloud className="w-3.5 h-3.5 text-amber-400" />
+                    <span>🖼️ बैनर फोटो अपलोड करें</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploading}
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleDirectFileUpload(file, 'event_banner');
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="url"
                   value={eventBanner}
@@ -1662,12 +2302,29 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1">Image URL *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-300">Image URL *</label>
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-semibold transition">
+                    <UploadCloud className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{isUploading ? 'अपलोड हो रहा है...' : '📸 फोन/कंप्यूटर से फोटो अपलोड करें'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploading}
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleDirectFileUpload(file, 'photo');
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="url"
                   required
                   value={photoUrl}
                   onChange={e => setPhotoUrl(e.target.value)}
+                  placeholder="https://... या ऊपर दिए बटन से सीधे फोटो अपलोड करें"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white"
                 />
               </div>
