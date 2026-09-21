@@ -1,0 +1,6 @@
+{
+  "name": "Fire & Grace Fellowship",
+  "description": "A modern, professional Christian Church website and web app with live streaming, Bible study, sermons, prayer requests, events, referral system, and member community.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "Fire & Grace Fellowship",
+  "short_name": "Fire & Grace",
+  "description": "Modern Christian church with live streams, sermons, Bible study, and fellowship.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0B0F19",
+  "theme_color": "#0B0F19",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

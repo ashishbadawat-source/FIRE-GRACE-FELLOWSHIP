@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>FIRE & GRACE FELLOWSHIP | Church & Christian Community</title>
+    <meta name="description" content="Welcome to Fire & Grace Fellowship. Experience vibrant worship, gospel teachings, live services, Bible study, prayer requests, and an empowering Christian fellowship." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="FIRE & GRACE FELLOWSHIP | Church & Christian Community" />
+    <meta property="og:description" content="Welcome to Fire & Grace Fellowship. Join our live streams, explore inspirational sermons, read the Bible, and connect with our faithful community." />
+    <meta property="og:site_name" content="Fire & Grace Fellowship" />
+    <meta property="og:image" content="/pwa-512x512.png" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="FIRE & GRACE FELLOWSHIP | Church & Christian Community" />
+    <meta name="twitter:description" content="Welcome to Fire & Grace Fellowship. Join our live streams, sermons, Bible study, and connect with our faithful community." />
+    <meta name="twitter:image" content="/pwa-512x512.png" />
+
+    <!-- PWA & Mobile Meta -->
+    <meta name="theme-color" content="#0B0F19" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Fire & Grace" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Google Fonts for High-End Spiritual Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+    <!-- Schema.org Church Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Church",
+      "name": "Fire & Grace Fellowship",
+      "alternateName": "FIRE & GRACE FELLOWSHIP",
+      "description": "A vibrant Christian Church community offering live worship, sermons, Bible study, and prayer fellowship.",
+      "url": "https://firegracefellowship.org",
+      "logo": "/icon.svg",
+      "telephone": "+1-800-555-FIRE",
+      "email": "contact@firegracefellowship.org",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "777 Grace Cathedral Way, Holy Spirit Avenue",
+        "addressLocality": "Los Angeles",
+        "addressRegion": "CA",
+        "postalCode": "90001",
+        "addressCountry": "US"
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Sunday"],
+          "opens": "09:00",
+          "closes": "13:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Wednesday", "Friday"],
+          "opens": "18:30",
+          "closes": "21:00"
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body class="bg-[#0B0F19] text-slate-100 antialiased selection:bg-amber-500 selection:text-black">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
