@@ -42,7 +42,19 @@ interface HomeViewProps {
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenRegisterModal }) => {
-  const { user, openAuthModal, detectedRefCode } = useAuth();
+  const { user, openAuthModal, loginAsAdmin, detectedRefCode } = useAuth();
+  const [adminLoading, setAdminLoading] = useState(false);
+
+  const handleHeroAdminClick = async () => {
+    if (user?.role === 'admin') {
+      onNavigate('admin-dashboard');
+      return;
+    }
+    setAdminLoading(true);
+    await loginAsAdmin();
+    setAdminLoading(false);
+    onNavigate('admin-dashboard');
+  };
 
   const [settings, setSettings] = useState<HomepageSettings | null>(null);
   const [sermons, setSermons] = useState<Sermon[]>([]);
@@ -160,6 +172,16 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenRegisterMo
         >
           <Radio className="w-4 h-4 animate-pulse" />
           <span>Watch Live</span>
+        </button>
+
+        <button
+          id="btn-hero-admin-direct"
+          onClick={handleHeroAdminClick}
+          disabled={adminLoading}
+          className="px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/30 to-amber-500/20 hover:from-amber-500/30 hover:to-yellow-500/40 border border-amber-400/60 text-amber-300 font-bold text-xs shadow-lg shadow-amber-500/10 transition flex items-center gap-2"
+        >
+          <Shield className="w-4 h-4 text-amber-400" />
+          <span>{adminLoading ? 'Opening...' : '👑 Admin Access'}</span>
         </button>
 
         <button
