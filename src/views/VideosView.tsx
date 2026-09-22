@@ -21,6 +21,9 @@ import {
   FileVideo,
   Loader2,
   CheckCircle,
+  AlertTriangle,
+  Cloud,
+  Server,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { downloadMediaFile } from '../utils/downloader';
@@ -101,6 +104,8 @@ export const VideosView: React.FC = () => {
   const [newVideoDuration, setNewVideoDuration] = useState('15:00');
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
+  const [videoStorageTarget, setVideoStorageTarget] = useState<'auto' | 'firebase' | 'server'>('auto');
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
 
   useEffect(() => {
     loadVideos();
@@ -138,11 +143,23 @@ export const VideosView: React.FC = () => {
   };
 
   // Direct Video File Upload Handler
-  const handleVideoFileUpload = async (file: File) => {
+  const handleVideoFileUpload = async (file: File, overrideTarget?: 'auto' | 'firebase' | 'server') => {
     if (!file) return;
+    const target = overrideTarget || videoStorageTarget;
+    setSelectedVideoFile(file);
+
+    console.log('[VideosView] Starting video file upload:', {
+      name: file.name,
+      sizeMB: (file.size / (1024 * 1024)).toFixed(2),
+      mimeType: file.type,
+      storageTarget: target,
+    });
+
     const MAX_SIZE = 150 * 1024 * 1024; // 150MB
     if (file.size > MAX_SIZE) {
-      setUploadError(`फ़ाइल 150MB से छोटी होनी चाहिए। आपकी फ़ाइल: ${(file.size / (1024 * 1024)).toFixed(1)}MB`);
+      const errTxt = `फ़ाइल 150MB से छोटी होनी चाहिए। आपकी फ़ाइल: ${(file.size / (1024 * 1024)).toFixed(1)}MB`;
+      console.warn('[VideosView] File size exceeded limit:', errTxt);
+      setUploadError(errTxt);
       return;
     }
 
@@ -152,11 +169,12 @@ export const VideosView: React.FC = () => {
     setUploadProgress(`वीडियो प्रोसेस और अपलोड हो रहा है (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`);
 
     try {
-      const { url } = await uploadChurchMediaFile(
+      const { url, provider } = await uploadChurchMediaFile(
         file,
         {
           category: 'Church Video Archive',
           type: 'video',
+          storageTarget: target,
           description: `Video recording ${file.name}`,
         },
         (percent, message) => {
@@ -164,13 +182,25 @@ export const VideosView: React.FC = () => {
         }
       );
 
+      console.log(`[VideosView] Video uploaded successfully via ${provider}:`, url);
       setNewVideoUrl(url);
       if (!newVideoTitle.trim()) {
         setNewVideoTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
       }
-      setUploadSuccess(`वीडियो "${file.name}" सफलतापूर्वक अपलोड हो गया!`);
+      const providerLabel = provider === 'firebase' ? 'Firebase Cloud Storage' : 'Church Server Storage';
+      setUploadSuccess(`वीडियो "${file.name}" सफलतापूर्वक ${providerLabel} पर अपलोड हो गया!`);
     } catch (err: any) {
-      setUploadError(err.message || 'वीडियो अपलोड करने में विफल रहा। कृपया पुन: प्रयास करें।');
+      console.error('[VideosView] Video upload failed:', {
+        message: err.message,
+        firebaseCode: err.firebaseCode,
+        errorObj: err,
+      });
+
+      let displayMessage = err.message || 'वीडियो अपलोड करने में विफल रहा।';
+      if (err.firebaseCode === 'storage/unauthorized' || displayMessage.includes('unauthorized') || displayMessage.includes('अनुमति अस्वीकृत')) {
+        displayMessage = 'Firebase Storage अनुमति अस्वीकृत (403 Unauthorized): स्टोरेज रूल्स ने अपलोड अस्वीकार कर दिया। आप नीचे दिए गए "Church Server से पुनः प्रयास करें" बटन से तुरंत अपलोड कर सकते हैं।';
+      }
+      setUploadError(displayMessage);
     } finally {
       setIsUploading(false);
       setUploadProgress('');
@@ -180,14 +210,18 @@ export const VideosView: React.FC = () => {
   // Thumbnail File Upload Handler
   const handleThumbFileUpload = async (file: File) => {
     if (!file) return;
+    console.log('[VideosView] Starting thumbnail upload:', file.name, file.size);
     try {
       const { url } = await uploadChurchMediaFile(file, {
         category: 'Video Thumbnail',
         type: 'image',
+        storageTarget: videoStorageTarget,
       });
+      console.log('[VideosView] Thumbnail uploaded:', url);
       setNewVideoThumbnail(url);
     } catch (err: any) {
-      alert(err.message || 'थंबनेल अपलोड में समस्या हुई।');
+      console.error('[VideosView] Thumbnail upload error:', err);
+      setUploadError(err.message || 'थंबनेल अपलोड में समस्या हुई।');
     }
   };
 
@@ -515,9 +549,27 @@ export const VideosView: React.FC = () => {
             </div>
 
             {uploadError && (
-              <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
-                <X className="w-4 h-4 shrink-0" />
-                <span>{uploadError}</span>
+              <div className="p-3.5 rounded-xl bg-red-950/70 border border-red-500/50 text-red-200 text-xs space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold text-red-300">वीडियो अपलोड त्रुटि विवरण (Upload Error Details):</p>
+                    <p className="leading-relaxed">{uploadError}</p>
+                  </div>
+                </div>
+                {(uploadError.includes('Firebase') || uploadError.includes('unauthorized') || uploadError.includes('अस्वीकृत')) && selectedVideoFile && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVideoStorageTarget('server');
+                      handleVideoFileUpload(selectedVideoFile, 'server');
+                    }}
+                    className="w-full mt-2 py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition flex items-center justify-center gap-1.5 shadow"
+                  >
+                    <Server className="w-3.5 h-3.5" />
+                    Church Fast Server स्टोरेज से तुरंत पुनः अपलोड करें
+                  </button>
+                )}
               </div>
             )}
 
@@ -529,6 +581,36 @@ export const VideosView: React.FC = () => {
             )}
 
             <form onSubmit={handleSubmitNewVideo} className="space-y-4">
+              {/* Storage Provider Selector */}
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">स्टोरेज प्रदाता (Storage Engine)</label>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setVideoStorageTarget('auto')}
+                    className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 transition ${
+                      videoStorageTarget === 'auto' || videoStorageTarget === 'server'
+                        ? 'bg-amber-500/15 border-amber-500/60 text-amber-300 font-semibold'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <Server className="w-3.5 h-3.5" />
+                    Church Server (तेज़, 150MB+)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVideoStorageTarget('firebase')}
+                    className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 transition ${
+                      videoStorageTarget === 'firebase'
+                        ? 'bg-amber-500/15 border-amber-500/60 text-amber-300 font-semibold'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <Cloud className="w-3.5 h-3.5" />
+                    Firebase Storage
+                  </button>
+                </div>
+              </div>
               {/* Direct Video File Dropzone */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">

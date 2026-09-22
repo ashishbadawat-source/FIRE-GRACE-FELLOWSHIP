@@ -4,6 +4,21 @@
  */
 
 import { api } from '../services/api';
+import { uploadToFirebaseStorage, firebaseConfig } from '../firebase';
+
+export interface UploadOptions {
+  category?: string;
+  description?: string;
+  type?: 'audio' | 'video' | 'image' | 'document' | 'other';
+  storageTarget?: 'auto' | 'firebase' | 'server';
+  folder?: string;
+}
+
+export interface UploadResult {
+  url: string;
+  file: any;
+  provider: 'firebase' | 'server' | 'local';
+}
 
 /**
  * Client-side image compressor.
@@ -70,6 +85,7 @@ export async function optimizeImage(file: File, maxDimension = 1920, quality = 0
           } else {
             const cleanName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
             const optimized = new File([blob], cleanName, { type: 'image/jpeg', lastModified: Date.now() });
+            console.log(`[Image Optimizer] Compressed ${(file.size / 1024).toFixed(0)}KB -> ${(optimized.size / 1024).toFixed(0)}KB`);
             resolve(optimized);
           }
         },
@@ -89,20 +105,22 @@ export async function optimizeImage(file: File, maxDimension = 1920, quality = 0
 
 /**
  * Universal Church File Uploader supporting:
- * 1. Automatic client-side image compression for instant camera photo uploads.
+ * 1. Firebase Storage with live progress and complete error diagnostics.
  * 2. High-performance 512KB binary chunk uploads for audio (MP3/WAV) and video (MP4) files up to 150MB+.
- * 3. Automatic 3x per-chunk retry to withstand network drops on mobile connections.
- * 4. Real-time percentage progress callback (0% - 100%).
+ * 3. Automatic client-side image compression for camera photos.
+ * 4. Automatic 3x per-chunk retry to withstand mobile network drops.
+ * 5. Detailed console logging during every stage to track and debug any upload issue.
  */
 export async function uploadChurchMediaFile(
   rawFile: File,
-  options: {
-    category?: string;
-    description?: string;
-    type?: 'audio' | 'video' | 'image' | 'document' | 'other';
-  } = {},
+  options: UploadOptions = {},
   onProgress?: (percent: number, message: string) => void
-): Promise<{ url: string; file: any }> {
+): Promise<UploadResult> {
+  console.group(`[Media Upload] File: "${rawFile.name}" (${(rawFile.size / (1024 * 1024)).toFixed(2)} MB)`);
+  console.log('[Media Upload] Options:', options);
+  console.log('[Media Upload] Storage Target:', options.storageTarget || 'auto');
+  console.log('[Media Upload] Firebase Bucket Configured:', firebaseConfig.storageBucket);
+
   let fileToUpload = rawFile;
 
   // 1. Optimize Image if applicable
@@ -114,7 +132,8 @@ export async function uploadChurchMediaFile(
     if (onProgress) onProgress(8, 'फोटो को अनुकूलित किया जा रहा है...');
     try {
       fileToUpload = await optimizeImage(rawFile);
-    } catch {
+    } catch (optErr) {
+      console.warn('[Media Upload] Image compression error, using original file:', optErr);
       fileToUpload = rawFile;
     }
   }
@@ -134,11 +153,56 @@ export async function uploadChurchMediaFile(
     determinedType = 'document';
   }
 
-  // 2. If file is very small (< 1.5MB), try fast direct upload first
+  // 2. Try Firebase Storage if requested or preferred
+  if (options.storageTarget === 'firebase') {
+    console.log('[Media Upload] Attempting Firebase Storage upload...');
+    const targetFolder = options.folder || (determinedType === 'image' ? 'photos' : determinedType === 'video' ? 'videos' : 'media');
+    const safeName = fileToUpload.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const destinationPath = `church_media/${targetFolder}/${Date.now()}_${safeName}`;
+
+    try {
+      if (onProgress) onProgress(15, 'Firebase Storage पर अपलोड हो रहा है...');
+      const fbResult = await uploadToFirebaseStorage(
+        fileToUpload,
+        destinationPath,
+        (percent, transferred, total) => {
+          if (onProgress) {
+            onProgress(percent, `Firebase अपलोड: ${percent}% (${(transferred / (1024 * 1024)).toFixed(1)} / ${(total / (1024 * 1024)).toFixed(1)} MB)`);
+          }
+        }
+      );
+
+      console.log('[Media Upload] Firebase Storage upload succeeded:', fbResult.downloadUrl);
+      console.groupEnd();
+      return {
+        url: fbResult.downloadUrl,
+        file: {
+          id: `fb_${Date.now()}`,
+          name: fileToUpload.name,
+          type: determinedType,
+          mimeType: fileToUpload.type,
+          size: fileToUpload.size,
+          url: fbResult.downloadUrl,
+          category: options.category || 'Church Media',
+          uploadedAt: new Date().toISOString(),
+          provider: 'firebase',
+        },
+        provider: 'firebase',
+      };
+    } catch (fbErr: any) {
+      console.error('[Media Upload] Firebase Storage upload failed:', fbErr);
+      console.groupEnd();
+      // Throw the explicit Firebase error as requested
+      throw fbErr;
+    }
+  }
+
+  // 3. If file is small (< 1.5MB), try fast direct server upload first
   const DIRECT_UPLOAD_LIMIT = 1.5 * 1024 * 1024;
   if (fileToUpload.size < DIRECT_UPLOAD_LIMIT) {
     if (onProgress) onProgress(25, 'फ़ाइल अपलोड की जा रही है...');
     try {
+      console.log('[Media Upload] Small file detected, attempting direct upload...');
       const dataUrl = await fileToDataUrl(fileToUpload);
       if (onProgress) onProgress(65, 'सर्वर पर सहेजा जा रहा है...');
       const res = await api.uploadFile({
@@ -151,21 +215,24 @@ export async function uploadChurchMediaFile(
         type: determinedType,
       });
 
+      console.log('[Media Upload] Direct upload successful:', res.file?.url);
+      console.groupEnd();
       if (onProgress) onProgress(100, 'अपलोड पूर्ण!');
       return {
         url: res.file?.url || dataUrl,
         file: res.file,
+        provider: 'server',
       };
     } catch (err: any) {
-      console.warn('Direct upload fallback to chunked upload:', err);
-      // Fall through to chunked upload below
+      console.warn('[Media Upload] Direct upload failed, falling back to chunked upload:', err);
     }
   }
 
-  // 3. Chunked Upload with 512KB slices (Zero proxy timeouts, ultra-reliable on mobile)
+  // 4. Chunked Upload with 512KB slices (Zero proxy timeouts, ultra-reliable on mobile)
   const CHUNK_SIZE = 512 * 1024; // 512 KB per slice
   const totalChunks = Math.ceil(fileToUpload.size / CHUNK_SIZE);
   const uploadId = `upl_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  console.log(`[Media Upload] Slicing into ${totalChunks} chunks of 512KB each. UploadId: ${uploadId}`);
 
   let finalResult: any = null;
 
@@ -214,20 +281,22 @@ export async function uploadChurchMediaFile(
           chunkUploaded = true;
           break;
         } else {
-          // If binary endpoint not supported, try base64 fallback
           if (binRes.status === 404 || binRes.status === 405) {
             break;
           }
           lastError = new Error(`HTTP ${binRes.status}`);
+          console.warn(`[Media Upload] Chunk ${chunkIndex + 1} attempt ${attempt + 1} status ${binRes.status}`);
         }
       } catch (err: any) {
         lastError = err;
+        console.warn(`[Media Upload] Chunk ${chunkIndex + 1} attempt ${attempt + 1} network error:`, err);
         await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
       }
     }
 
     // Fallback: If binary upload failed on this chunk, try base64 JSON chunk
     if (!chunkUploaded) {
+      console.log(`[Media Upload] Chunk ${chunkIndex + 1} trying base64 fallback...`);
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           const chunkBase64 = await fileToDataUrl(chunkBlob);
@@ -265,14 +334,17 @@ export async function uploadChurchMediaFile(
     }
 
     if (!chunkUploaded) {
+      console.error(`[Media Upload] All retry attempts failed for chunk ${chunkIndex + 1}/${totalChunks}:`, lastError);
+      console.groupEnd();
       throw new Error(lastError?.message || `खंड ${chunkIndex + 1}/${totalChunks} अपलोड करने में विफल रहा।`);
     }
   }
 
   if (onProgress) onProgress(100, 'अपलोड सफलतापूर्वक पूरा हुआ!');
+  console.log('[Media Upload] Final result:', finalResult);
+  console.groupEnd();
 
   if (!finalResult || !finalResult.file) {
-    // Graceful fallback: construct usable record
     const localUrl = URL.createObjectURL(fileToUpload);
     return {
       url: localUrl,
@@ -283,12 +355,14 @@ export async function uploadChurchMediaFile(
         url: localUrl,
         size: fileToUpload.size,
       },
+      provider: 'local',
     };
   }
 
   return {
     url: finalResult.file.url,
     file: finalResult.file,
+    provider: 'server',
   };
 }
 

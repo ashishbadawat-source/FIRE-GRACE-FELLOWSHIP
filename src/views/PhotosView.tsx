@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Image as ImageIcon, ChevronLeft, ChevronRight, X, Download, Share2, Layers, Plus, Upload, Loader2, CheckCircle } from 'lucide-react';
+import { Camera, Image as ImageIcon, ChevronLeft, ChevronRight, X, Download, Share2, Layers, Plus, Upload, Loader2, CheckCircle, AlertTriangle, Cloud, Server } from 'lucide-react';
 import { api } from '../services/api';
 import { uploadChurchMediaFile } from '../utils/uploader';
 import { downloadMediaFile } from '../utils/downloader';
@@ -27,6 +27,7 @@ export const PhotosView: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [uploadError, setUploadError] = useState('');
+  const [storageTarget, setStorageTarget] = useState<'auto' | 'firebase' | 'server'>('auto');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchAlbums = () => {
@@ -52,6 +53,12 @@ export const PhotosView: React.FC = () => {
 
   const handleFileSelect = (file: File) => {
     if (!file) return;
+    console.log('[PhotosView] Selected photo file:', {
+      name: file.name,
+      size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+      type: file.type,
+      storageTarget,
+    });
     setUploadFile(file);
     setUploadError('');
     setUploadSuccess('');
@@ -62,23 +69,33 @@ export const PhotosView: React.FC = () => {
     setPreviewUrl(localUrl);
   };
 
-  const handleUploadSubmit = async (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent, overrideTarget?: 'auto' | 'firebase' | 'server') => {
     e.preventDefault();
     if (!uploadFile) {
       setUploadError('कृपया फोटो फ़ाइल चुनें।');
       return;
     }
 
+    const activeTarget = overrideTarget || storageTarget;
     setIsUploading(true);
     setUploadError('');
     setUploadSuccess('');
 
+    console.log('[PhotosView] Initiating photo upload:', {
+      fileName: uploadFile.name,
+      size: uploadFile.size,
+      storageTarget: activeTarget,
+      title: uploadTitle,
+      albumId: uploadAlbumId,
+    });
+
     try {
-      const { url } = await uploadChurchMediaFile(
+      const { url, provider } = await uploadChurchMediaFile(
         uploadFile,
         {
           category: 'Church Photo Gallery',
           type: 'image',
+          storageTarget: activeTarget,
           description: uploadDescription || `Church photo ${uploadTitle}`,
         },
         (percent, message) => {
@@ -86,8 +103,11 @@ export const PhotosView: React.FC = () => {
         }
       );
 
+      console.log(`[PhotosView] Photo uploaded successfully via ${provider}. URL:`, url);
+
       const targetAlbum = uploadAlbumId || (albums[0] ? albums[0].id : 'album_1');
 
+      console.log('[PhotosView] Adding photo metadata to album:', targetAlbum);
       await api.addPhoto({
         albumId: targetAlbum,
         title: uploadTitle.trim() || uploadFile.name,
@@ -95,7 +115,8 @@ export const PhotosView: React.FC = () => {
         description: uploadDescription.trim(),
       });
 
-      setUploadSuccess('फोटो सफलतापूर्वक अपलोड होकर गैलरी में जुड़ गई!');
+      const providerLabel = provider === 'firebase' ? 'Firebase Cloud Storage' : 'Church Server Storage';
+      setUploadSuccess(`फोटो सफलतापूर्वक ${providerLabel} पर अपलोड होकर गैलरी में जुड़ गई!`);
       fetchPhotos(selectedAlbumId);
       fetchAlbums();
       setTimeout(() => {
@@ -105,9 +126,19 @@ export const PhotosView: React.FC = () => {
         setUploadTitle('');
         setUploadDescription('');
         setUploadSuccess('');
-      }, 1200);
+      }, 1400);
     } catch (err: any) {
-      setUploadError(err.message || 'फोटो अपलोड करने में त्रुटि हुई।');
+      console.error('[PhotosView] Upload process failed:', {
+        message: err.message,
+        firebaseCode: err.firebaseCode,
+        errorObj: err,
+      });
+
+      let displayMessage = err.message || 'फोटो अपलोड करने में त्रुटि हुई।';
+      if (err.firebaseCode === 'storage/unauthorized' || displayMessage.includes('unauthorized') || displayMessage.includes('अनुमति अस्वीकृत')) {
+        displayMessage = 'Firebase Storage अनुमति अस्वीकृत (403 Unauthorized): स्टोरेज रूल्स ने अपलोड अस्वीकार कर दिया। आप नीचे दिए गए "Church Server से पुनः प्रयास करें" बटन से तुरंत अपलोड कर सकते हैं।';
+      }
+      setUploadError(displayMessage);
     } finally {
       setIsUploading(false);
       setUploadProgress('');
@@ -224,8 +255,27 @@ export const PhotosView: React.FC = () => {
             </div>
 
             {uploadError && (
-              <div className="p-3 rounded-xl bg-red-950/60 border border-red-500/40 text-red-200 text-xs">
-                {uploadError}
+              <div className="p-3.5 rounded-xl bg-red-950/70 border border-red-500/50 text-red-200 text-xs space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold text-red-300">अपलोड विफलता विवरण (Upload Error Details):</p>
+                    <p className="leading-relaxed">{uploadError}</p>
+                  </div>
+                </div>
+                {(uploadError.includes('Firebase') || uploadError.includes('unauthorized') || uploadError.includes('अस्वीकृत')) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      setStorageTarget('server');
+                      handleUploadSubmit(e, 'server');
+                    }}
+                    className="w-full mt-2 py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition flex items-center justify-center gap-1.5 shadow"
+                  >
+                    <Server className="w-3.5 h-3.5" />
+                    Church Fast Server स्टोरेज से तुरंत पुनः प्रयास करें
+                  </button>
+                )}
               </div>
             )}
 
@@ -237,6 +287,36 @@ export const PhotosView: React.FC = () => {
             )}
 
             <form onSubmit={handleUploadSubmit} className="space-y-4">
+              {/* Storage Provider Selector */}
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">स्टोरेज प्रदाता (Storage Engine)</label>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setStorageTarget('auto')}
+                    className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 transition ${
+                      storageTarget === 'auto' || storageTarget === 'server'
+                        ? 'bg-amber-500/15 border-amber-500/60 text-amber-300 font-semibold'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <Server className="w-3.5 h-3.5" />
+                    Church Server (तेज़)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStorageTarget('firebase')}
+                    className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 transition ${
+                      storageTarget === 'firebase'
+                        ? 'bg-amber-500/15 border-amber-500/60 text-amber-300 font-semibold'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <Cloud className="w-3.5 h-3.5" />
+                    Firebase Storage
+                  </button>
+                </div>
+              </div>
               {/* File picker */}
               <input
                 ref={fileInputRef}

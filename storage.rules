@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      // Allow read access to all users for church fellowship media
+      allow read: if true;
+      // Allow uploads for church photos and videos
+      allow write: if true;
+    }
+  }
+}
