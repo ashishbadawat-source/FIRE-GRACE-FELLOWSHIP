@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { Camera, Image as ImageIcon, ChevronLeft, ChevronRight, X, Download, Share2, Layers } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Camera, Image as ImageIcon, ChevronLeft, ChevronRight, X, Download, Share2, Layers, Plus, Upload, Loader2, CheckCircle } from 'lucide-react';
 import { api } from '../services/api';
+import { uploadChurchMediaFile } from '../utils/uploader';
+import { downloadMediaFile } from '../utils/downloader';
 import type { PhotoAlbum, PhotoItem } from '../types';
 
 export const PhotosView: React.FC = () => {
@@ -14,13 +16,103 @@ export const PhotosView: React.FC = () => {
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
 
+  // Upload Modal State
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDescription, setUploadDescription] = useState('');
+  const [uploadAlbumId, setUploadAlbumId] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const fetchAlbums = () => {
+    api.getPhotoAlbums().then(res => {
+      setAlbums(res.albums);
+      if (res.albums.length > 0 && !uploadAlbumId) {
+        setUploadAlbumId(res.albums[0].id);
+      }
+    }).catch(() => {});
+  };
+
+  const fetchPhotos = (albumId: string) => {
+    api.getPhotos(albumId).then(res => setPhotos(res.photos)).catch(() => {});
+  };
+
   useEffect(() => {
-    api.getPhotoAlbums().then(res => setAlbums(res.albums)).catch(() => {});
+    fetchAlbums();
   }, []);
 
   useEffect(() => {
-    api.getPhotos(selectedAlbumId).then(res => setPhotos(res.photos)).catch(() => {});
+    fetchPhotos(selectedAlbumId);
   }, [selectedAlbumId]);
+
+  const handleFileSelect = (file: File) => {
+    if (!file) return;
+    setUploadFile(file);
+    setUploadError('');
+    setUploadSuccess('');
+    if (!uploadTitle.trim()) {
+      setUploadTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+    }
+    const localUrl = URL.createObjectURL(file);
+    setPreviewUrl(localUrl);
+  };
+
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadFile) {
+      setUploadError('कृपया फोटो फ़ाइल चुनें।');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError('');
+    setUploadSuccess('');
+
+    try {
+      const { url } = await uploadChurchMediaFile(
+        uploadFile,
+        {
+          category: 'Church Photo Gallery',
+          type: 'image',
+          description: uploadDescription || `Church photo ${uploadTitle}`,
+        },
+        (percent, message) => {
+          setUploadProgress(`${message} (${percent}%)`);
+        }
+      );
+
+      const targetAlbum = uploadAlbumId || (albums[0] ? albums[0].id : 'album_1');
+
+      await api.addPhoto({
+        albumId: targetAlbum,
+        title: uploadTitle.trim() || uploadFile.name,
+        url,
+        description: uploadDescription.trim(),
+      });
+
+      setUploadSuccess('फोटो सफलतापूर्वक अपलोड होकर गैलरी में जुड़ गई!');
+      fetchPhotos(selectedAlbumId);
+      fetchAlbums();
+      setTimeout(() => {
+        setIsUploadOpen(false);
+        setUploadFile(null);
+        setPreviewUrl('');
+        setUploadTitle('');
+        setUploadDescription('');
+        setUploadSuccess('');
+      }, 1200);
+    } catch (err: any) {
+      setUploadError(err.message || 'फोटो अपलोड करने में त्रुटि हुई।');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress('');
+    }
+  };
 
   const openLightbox = (index: number) => {
     setActivePhotoIndex(index);
@@ -63,32 +155,206 @@ export const PhotosView: React.FC = () => {
         </p>
       </div>
 
-      {/* Album Selector Filter */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setSelectedAlbumId('all')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
-            selectedAlbumId === 'all'
-              ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-              : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
-          }`}
-        >
-          All Photos ({photos.length})
-        </button>
-        {albums.map(alb => (
+      {/* Album Selector Filter & Upload Button */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
           <button
-            key={alb.id}
-            onClick={() => setSelectedAlbumId(alb.id)}
+            onClick={() => setSelectedAlbumId('all')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
-              selectedAlbumId === alb.id
+              selectedAlbumId === 'all'
                 ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
                 : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
             }`}
           >
-            {alb.title} ({alb.photosCount})
+            All Photos ({photos.length})
           </button>
-        ))}
+          {albums.map(alb => (
+            <button
+              key={alb.id}
+              onClick={() => setSelectedAlbumId(alb.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                selectedAlbumId === alb.id
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
+              }`}
+            >
+              {alb.title} ({alb.photosCount})
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => {
+            setIsUploadOpen(true);
+            setUploadError('');
+            setUploadSuccess('');
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-lg shadow-amber-500/20"
+        >
+          <Plus className="w-4 h-4" />
+          फोटो अपलोड करें (Upload Photo)
+        </button>
       </div>
+
+      {/* Upload Modal */}
+      {isUploadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-amber-500/30 rounded-2xl max-w-lg w-full p-6 text-white space-y-5 shadow-2xl relative">
+            <button
+              onClick={() => {
+                if (!isUploading) {
+                  setIsUploadOpen(false);
+                  setUploadFile(null);
+                  setPreviewUrl('');
+                }
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                <Camera className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold font-cinzel">गैलरी में फोटो अपलोड करें</h3>
+                <p className="text-xs text-slate-400">Upload high-res moments to church gallery</p>
+              </div>
+            </div>
+
+            {uploadError && (
+              <div className="p-3 rounded-xl bg-red-950/60 border border-red-500/40 text-red-200 text-xs">
+                {uploadError}
+              </div>
+            )}
+
+            {uploadSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-400" />
+                {uploadSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleUploadSubmit} className="space-y-4">
+              {/* File picker */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFileSelect(f);
+                }}
+              />
+
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-slate-700 hover:border-amber-500/60 rounded-xl p-5 text-center cursor-pointer transition bg-slate-950/40 flex flex-col items-center justify-center min-h-[140px]"
+              >
+                {previewUrl ? (
+                  <div className="space-y-2">
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
+                      className="max-h-36 max-w-full mx-auto rounded-lg object-contain shadow"
+                    />
+                    <p className="text-[11px] text-amber-400">फ़ाइल बदलने के लिए क्लिक करें ({uploadFile?.name})</p>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 text-amber-400/80 mb-2" />
+                    <p className="text-xs font-semibold text-slate-200">फोटो चुनने के लिए यहां क्लिक करें</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">JPG, PNG, WEBP (फ़ोन से खींची गई फोटो स्वतः ऑप्टिमाइज़ होगी)</p>
+                  </>
+                )}
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">फोटो का शीर्षक (Title)</label>
+                <input
+                  type="text"
+                  value={uploadTitle}
+                  onChange={e => setUploadTitle(e.target.value)}
+                  placeholder="उदा. Sunday Worship, Youth Gathering..."
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* Album */}
+              {albums.length > 0 && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">एल्बम चुनें (Select Album)</label>
+                  <select
+                    value={uploadAlbumId}
+                    onChange={e => setUploadAlbumId(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-amber-500"
+                  >
+                    {albums.map(alb => (
+                      <option key={alb.id} value={alb.id}>
+                        {alb.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">विवरण / कैप्शन (Description - Optional)</label>
+                <textarea
+                  rows={2}
+                  value={uploadDescription}
+                  onChange={e => setUploadDescription(e.target.value)}
+                  placeholder="फोटो के बारे में कुछ शब्द लिखें..."
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none"
+                />
+              </div>
+
+              {/* Upload Progress */}
+              {isUploading && (
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center space-y-1">
+                  <div className="flex items-center justify-center gap-2 text-xs text-amber-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{uploadProgress || 'फोटो अपलोड हो रही है...'}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isUploading}
+                  onClick={() => setIsUploadOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300"
+                >
+                  रद्द करें (Cancel)
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploading || !uploadFile}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-50 transition"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      अपलोडिंग...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5" />
+                      गैलरी में जोड़ें (Upload)
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Photos Grid */}
       {photos.length === 0 ? (
@@ -164,14 +430,25 @@ export const PhotosView: React.FC = () => {
               alt={currentPhoto.title}
               className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl"
             />
-            <div className="mt-4 text-center text-white space-y-1">
+            <div className="mt-4 text-center text-white space-y-2">
               <h3 className="text-lg font-bold font-cinzel">{currentPhoto.title}</h3>
               {currentPhoto.description && (
                 <p className="text-xs text-slate-300 max-w-xl mx-auto">{currentPhoto.description}</p>
               )}
-              <span className="text-[11px] text-amber-400/80 block">
-                Photo {activePhotoIndex! + 1} of {photos.length}
-              </span>
+              <div className="flex items-center justify-center gap-3 pt-1">
+                <span className="text-[11px] text-amber-400/80">
+                  Photo {activePhotoIndex! + 1} of {photos.length}
+                </span>
+                <span className="text-slate-600">•</span>
+                <button
+                  onClick={() => downloadMediaFile(currentPhoto.url, `${currentPhoto.title || 'church-photo'}.jpg`)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-xs font-semibold text-slate-200 transition"
+                  title="Download Photo"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  डाउनलोड (Download)
+                </button>
+              </div>
             </div>
           </div>
         </div>

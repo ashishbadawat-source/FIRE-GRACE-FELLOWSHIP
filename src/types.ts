@@ -295,6 +295,7 @@ export interface BibleVerse {
   chapter: number;
   verse: number;
   text: string;
+  hindiText?: string;
   testament: 'Old' | 'New';
 }
 

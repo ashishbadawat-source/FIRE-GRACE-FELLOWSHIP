@@ -90,32 +90,33 @@ export interface ScriptureVerse {
   chapter: number;
   verse: number;
   text: string;
+  hindiText?: string;
   testament: 'Old' | 'New';
 }
 
 // Canonical curated verses for instant reading & rich search
 export const FAMOUS_VERSES: ScriptureVerse[] = [
   // Genesis
-  { book: 'Genesis', chapter: 1, verse: 1, text: 'In the beginning God created the heavens and the earth.', testament: 'Old' },
-  { book: 'Genesis', chapter: 1, verse: 2, text: 'The earth was without form, and void; and darkness was on the face of the deep. And the Spirit of God was hovering over the face of the waters.', testament: 'Old' },
-  { book: 'Genesis', chapter: 1, verse: 3, text: 'Then God said, "Let there be light"; and there was light.', testament: 'Old' },
-  { book: 'Genesis', chapter: 12, verse: 2, text: 'I will make you a great nation; I will bless you and make your name great; and you shall be a blessing.', testament: 'Old' },
-  { book: 'Genesis', chapter: 28, verse: 15, text: 'Behold, I am with you and will keep you wherever you go, and will bring you back to this land; for I will not leave you until I have done what I have spoken to you.', testament: 'Old' },
+  { book: 'Genesis', chapter: 1, verse: 1, text: 'In the beginning God created the heavens and the earth.', hindiText: 'आदि में परमेश्वर ने आकाश और पृथ्वी की सृष्टि की।', testament: 'Old' },
+  { book: 'Genesis', chapter: 1, verse: 2, text: 'The earth was without form, and void; and darkness was on the face of the deep. And the Spirit of God was hovering over the face of the waters.', hindiText: 'और पृथ्वी बेडौल और सूनसान पड़ी थी; और गहरे जल के ऊपर अन्धियारा था: तथा परमेश्वर का आत्मा जल के ऊपर मण्डलाता था।', testament: 'Old' },
+  { book: 'Genesis', chapter: 1, verse: 3, text: 'Then God said, "Let there be light"; and there was light.', hindiText: 'तब परमेश्वर ने कहा, "उजियाला हो": तो उजियाला हो गया।', testament: 'Old' },
+  { book: 'Genesis', chapter: 12, verse: 2, text: 'I will make you a great nation; I will bless you and make your name great; and you shall be a blessing.', hindiText: 'और मैं तुझ से एक बड़ी जाति बनाऊंगा, और तुझे आशीष दूंगा, और तेरा नाम बड़ा करूंगा, और तू आशीष का मूल होगा।', testament: 'Old' },
+  { book: 'Genesis', chapter: 28, verse: 15, text: 'Behold, I am with you and will keep you wherever you go, and will bring you back to this land; for I will not leave you until I have done what I have spoken to you.', hindiText: 'और देख, मैं तेरे संग रहूंगा, और जहां कहीं तू जाए वहां तेरी रक्षा करूंगा, और तुझे इस देश में लौटा लाऊंगा।', testament: 'Old' },
 
   // Psalms
-  { book: 'Psalms', chapter: 23, verse: 1, text: 'The Lord is my shepherd; I shall not want.', testament: 'Old' },
-  { book: 'Psalms', chapter: 23, verse: 2, text: 'He makes me to lie down in green pastures; He leads me beside the still waters.', testament: 'Old' },
-  { book: 'Psalms', chapter: 23, verse: 3, text: 'He restores my soul; He leads me in the paths of righteousness for His name’s sake.', testament: 'Old' },
-  { book: 'Psalms', chapter: 23, verse: 4, text: 'Yea, though I walk through the valley of the shadow of death, I will fear no evil; for You are with me; Your rod and Your staff, they comfort me.', testament: 'Old' },
-  { book: 'Psalms', chapter: 23, verse: 5, text: 'You prepare a table before me in the presence of my enemies; You anoint my head with oil; my cup runs over.', testament: 'Old' },
-  { book: 'Psalms', chapter: 23, verse: 6, text: 'Surely goodness and mercy shall follow me all the days of my life; and I will dwell in the house of the Lord forever.', testament: 'Old' },
+  { book: 'Psalms', chapter: 23, verse: 1, text: 'The Lord is my shepherd; I shall not want.', hindiText: 'यहोवा मेरा चरवाहा है; मुझे कुछ घटी न होगी।', testament: 'Old' },
+  { book: 'Psalms', chapter: 23, verse: 2, text: 'He makes me to lie down in green pastures; He leads me beside the still waters.', hindiText: 'वह मुझे हरी हरी चराइयों में बैठाता है; वह मुझे सुखदाई जल के झरने के पास ले चलता है।', testament: 'Old' },
+  { book: 'Psalms', chapter: 23, verse: 3, text: 'He restores my soul; He leads me in the paths of righteousness for His name’s sake.', hindiText: 'वह मेरे जी में जी ले आता है। धर्म के मार्गों में वह अपने नाम के निमित्त मेरी अगुवाई करता है।', testament: 'Old' },
+  { book: 'Psalms', chapter: 23, verse: 4, text: 'Yea, though I walk through the valley of the shadow of death, I will fear no evil; for You are with me; Your rod and Your staff, they comfort me.', hindiText: 'चाहे मैं घोर अन्धकार से भरी हुई तराई में होकर चलूं, तौभी हानि से न डरूंगा, क्योंकि तू मेरे साथ रहता है; तेरे सोंटे और तेरी लाठी से मुझे शान्ति मिलती है।', testament: 'Old' },
+  { book: 'Psalms', chapter: 23, verse: 5, text: 'You prepare a table before me in the presence of my enemies; You anoint my head with oil; my cup runs over.', hindiText: 'तू मेरे सताने वालों के साम्हने मेरे लिये मेज बिछाता है; तू ने मेरे सिर पर तेल मला है, मेरा कटोरा उमड़ रहा है।', testament: 'Old' },
+  { book: 'Psalms', chapter: 23, verse: 6, text: 'Surely goodness and mercy shall follow me all the days of my life; and I will dwell in the house of the Lord forever.', hindiText: 'निश्चय भलाई और करुणा जीवन भर मेरे साथ साथ बनी रहेंगी; और मैं यहोवा के धाम में सर्वदा वास करूंगा।', testament: 'Old' },
 
-  { book: 'Psalms', chapter: 91, verse: 1, text: 'He who dwells in the secret place of the Most High shall abide under the shadow of the Almighty.', testament: 'Old' },
-  { book: 'Psalms', chapter: 91, verse: 2, text: 'I will say of the Lord, "He is my refuge and my fortress; my God, in Him I will trust."', testament: 'Old' },
-  { book: 'Psalms', chapter: 91, verse: 3, text: 'Surely He shall deliver you from the snare of the fowler and from the perilous pestilence.', testament: 'Old' },
-  { book: 'Psalms', chapter: 91, verse: 4, text: 'He shall cover you with His feathers, and under His wings you shall take refuge; His truth shall be your shield and buckler.', testament: 'Old' },
-  { book: 'Psalms', chapter: 91, verse: 7, text: 'A thousand may fall at your side, and ten thousand at your right hand; but it shall not come near you.', testament: 'Old' },
-  { book: 'Psalms', chapter: 91, verse: 11, text: 'For He shall give His angels charge over you, to keep you in all your ways.', testament: 'Old' },
+  { book: 'Psalms', chapter: 91, verse: 1, text: 'He who dwells in the secret place of the Most High shall abide under the shadow of the Almighty.', hindiText: 'जो परमप्रधान के छाए हुए स्थान में बैठा रहे, वह सर्वशक्तिमान की छाया में ठिकाना पाएगा।', testament: 'Old' },
+  { book: 'Psalms', chapter: 91, verse: 2, text: 'I will say of the Lord, "He is my refuge and my fortress; my God, in Him I will trust."', hindiText: 'मैं यहोवा के विषय कहूंगा, कि वह मेरा शरणस्थान और मेरा गढ़ है; वह मेरा परमेश्वर है, मैं उस पर भरोसा रखूंगा।', testament: 'Old' },
+  { book: 'Psalms', chapter: 91, verse: 3, text: 'Surely He shall deliver you from the snare of the fowler and from the perilous pestilence.', hindiText: 'वह तो तुझे बहेलिये के जाल से, और महामारी से बचाएगा।', testament: 'Old' },
+  { book: 'Psalms', chapter: 91, verse: 4, text: 'He shall cover you with His feathers, and under His wings you shall take refuge; His truth shall be your shield and buckler.', hindiText: 'वह तुझे अपने पंखों की आड़ में ले लेगा, और तू उसके परों के नीचे शरण पाएगा; उसकी सच्चाई तेरे लिये ढाल और झिलम ठहरेगी।', testament: 'Old' },
+  { book: 'Psalms', chapter: 91, verse: 7, text: 'A thousand may fall at your side, and ten thousand at your right hand; but it shall not come near you.', hindiText: 'तेरे निकट हजार, और तेरी दाहिनी ओर दस हजार गिरेंगे; परन्तु वह तेरे पास न आएगा।', testament: 'Old' },
+  { book: 'Psalms', chapter: 91, verse: 11, text: 'For He shall give His angels charge over you, to keep you in all your ways.', hindiText: 'क्योंकि वह अपने दूतों को तेरे निमित्त आज्ञा देगा, कि जहां कहीं तू जाए वे तेरी रक्षा करें।', testament: 'Old' },
 
   { book: 'Psalms', chapter: 103, verse: 1, text: 'Bless the Lord, O my soul; and all that is within me, bless His holy name!', testament: 'Old' },
   { book: 'Psalms', chapter: 103, verse: 2, text: 'Bless the Lord, O my soul, and forget not all His benefits:', testament: 'Old' },
@@ -146,13 +147,13 @@ export const FAMOUS_VERSES: ScriptureVerse[] = [
   { book: 'Matthew', chapter: 28, verse: 19, text: 'Go therefore and make disciples of all the nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit.', testament: 'New' },
 
   // John
-  { book: 'John', chapter: 1, verse: 1, text: 'In the beginning was the Word, and the Word was with God, and the Word was God.', testament: 'New' },
-  { book: 'John', chapter: 1, verse: 12, text: 'But as many as received Him, to them He gave the right to become children of God, to those who believe in His name.', testament: 'New' },
-  { book: 'John', chapter: 1, verse: 14, text: 'And the Word became flesh and dwelt among us, and we beheld His glory, the glory as of the only begotten of the Father, full of grace and truth.', testament: 'New' },
-  { book: 'John', chapter: 3, verse: 16, text: 'For God so loved the world that He gave His only begotten Son, that whoever believes in Him should not perish but have everlasting life.', testament: 'New' },
-  { book: 'John', chapter: 10, verse: 10, text: 'The thief does not come except to steal, and to kill, and to destroy. I have come that they may have life, and that they may have it more abundantly.', testament: 'New' },
-  { book: 'John', chapter: 14, verse: 6, text: 'Jesus said to him, "I am the way, the truth, and the life. No one comes to the Father except through Me."', testament: 'New' },
-  { book: 'John', chapter: 14, verse: 27, text: 'Peace I leave with you, My peace I give to you; not as the world gives do I give to you. Let not your heart be troubled, neither let it be afraid.', testament: 'New' },
+  { book: 'John', chapter: 1, verse: 1, text: 'In the beginning was the Word, and the Word was with God, and the Word was God.', hindiText: 'आदि में वचन था, और वचन परमेश्वर के साथ था, और वचन परमेश्वर था।', testament: 'New' },
+  { book: 'John', chapter: 1, verse: 12, text: 'But as many as received Him, to them He gave the right to become children of God, to those who believe in His name.', hindiText: 'परन्तु जितनों ने उसे ग्रहण किया, उसने उन्हें परमेश्वर की सन्तान होने का अधिकार दिया, अर्थात् उन्हें जो उसके नाम पर विश्वास रखते हैं।', testament: 'New' },
+  { book: 'John', chapter: 1, verse: 14, text: 'And the Word became flesh and dwelt among us, and we beheld His glory, the glory as of the only begotten of the Father, full of grace and truth.', hindiText: 'और वचन देहधारी हुआ; और अनुग्रह और सच्चाई से परिपूर्ण होकर हमारे बीच में डेरा किया।', testament: 'New' },
+  { book: 'John', chapter: 3, verse: 16, text: 'For God so loved the world that He gave His only begotten Son, that whoever believes in Him should not perish but have everlasting life.', hindiText: 'क्योंकि परमेश्वर ने जगत से ऐसा प्रेम रखा कि उसने अपना एकलौता पुत्र दे दिया, ताकि जो कोई उस पर विश्वास करे, वह नाश न हो, परन्तु अनन्त जीवन पाए।', testament: 'New' },
+  { book: 'John', chapter: 10, verse: 10, text: 'The thief does not come except to steal, and to kill, and to destroy. I have come that they may have life, and that they may have it more abundantly.', hindiText: 'चोर केवल चोरी करने और नाश करने आता है। मैं इसलिये आया कि वे जीवन पाएं, और बहुतायत से पाएं।', testament: 'New' },
+  { book: 'John', chapter: 14, verse: 6, text: 'Jesus said to him, "I am the way, the truth, and the life. No one comes to the Father except through Me."', hindiText: 'यीशु ने उससे कहा, "मार्ग और सच्चाई और जीवन मैं ही हूं; बिना मेरे द्वारा कोई पिता के पास नहीं पहुंच सकता।"', testament: 'New' },
+  { book: 'John', chapter: 14, verse: 27, text: 'Peace I leave with you, My peace I give to you; not as the world gives do I give to you. Let not your heart be troubled, neither let it be afraid.', hindiText: 'मैं तुम्हें शान्ति दिए जाता हूं, अपनी शान्ति तुम्हें देता हूं; तुम्हारा मन व्याकुल न हो और न डरे।', testament: 'New' },
 
   // Acts
   { book: 'Acts', chapter: 1, verse: 8, text: 'But you shall receive power when the Holy Spirit has come upon you; and you shall be witnesses to Me in Jerusalem, and in all Judea and Samaria, and to the end of the earth.', testament: 'New' },
@@ -236,19 +237,37 @@ export function getChapterVerses(bookName: string, chapterNum: number): Scriptur
 
   for (let i = 1; i <= defaultCount; i++) {
     let text = `And the Lord spoke unto His people, saying: Walk in faith, holiness, and steadfast obedience before Me. (Verse ${i})`;
-    if (i === 1) text = `In this sacred chapter of ${bookName}, the wisdom of God is revealed unto those whose hearts seek after divine righteousness.`;
-    if (i === 2) text = `Let your soul rejoice in the lovingkindness of the Almighty, for His counsel stands forever and His thoughts to all generations.`;
-    if (i === 3) text = `Trust not in horses nor in chariots, but remember the majestic name of the Lord our God, who delivereth His saints.`;
-    if (i === 4) text = `He shall send forth His light and His truth; let them lead us unto His holy hill and to His tabernacles.`;
-    if (i === 5) text = `Be watchful and pray without ceasing, holding fast the confession of our hope without wavering, for He who promised is faithful.`;
-    if (i === 6) text = `Grace, mercy, and peace from God the Father and Christ Jesus our Lord be multiplied unto you in all abundance.`;
-    if (i === 7) text = `For the eyes of the Lord run to and fro throughout the whole earth, to show Himself strong on behalf of those whose heart is loyal toward Him.`;
+    let hindiText = `और यहोवा ने अपने लोगों से कहा: मेरे सम्मुख विश्वास, पवित्रता और सच्ची आज्ञाकारिता के साथ चलो। (पद ${i})`;
+
+    if (i === 1) {
+      text = `In this sacred chapter of ${bookName}, the wisdom of God is revealed unto those whose hearts seek after divine righteousness.`;
+      hindiText = `${book?.hindiName || bookName} के इस पवित्र अध्याय में, परमेश्वर का वचन उन सभी पर प्रगट होता है जो धर्म और सच्चाई के खोजी हैं।`;
+    } else if (i === 2) {
+      text = `Let your soul rejoice in the lovingkindness of the Almighty, for His counsel stands forever and His thoughts to all generations.`;
+      hindiText = `तुम्हारा मन सर्वशक्तिमान प्रभु की अनन्त करुणा में मगन रहे, क्योंकि उसकी दया और भलाई सदा सर्वदा बनी रहती है।`;
+    } else if (i === 3) {
+      text = `Trust not in horses nor in chariots, but remember the majestic name of the Lord our God, who delivereth His saints.`;
+      hindiText = `मनुष्य सांसारिक साधनों पर नहीं, परन्तु हमारे जीवित परमेश्वर के सामर्थी नाम पर भरोसा रखे जो अपने भक्तों का उद्धार करता है।`;
+    } else if (i === 4) {
+      text = `He shall send forth His light and His truth; let them lead us unto His holy hill and to His tabernacles.`;
+      hindiText = `वह अपना ज्योतिर्मय प्रकाश और सच्चाई भेजेगा; वे हमारी अगुवाई करेंगे और हमें अपनी पवित्र उपस्थिति में ले आएंगे।`;
+    } else if (i === 5) {
+      text = `Be watchful and pray without ceasing, holding fast the confession of our hope without wavering, for He who promised is faithful.`;
+      hindiText = `जागते रहो और निरन्तर प्रार्थना करते रहो; अपनी आशा के अंगीकार को दृढ़ता से थामे रहो, क्योंकि प्रभु विश्वासयोग्य है।`;
+    } else if (i === 6) {
+      text = `Grace, mercy, and peace from God the Father and Christ Jesus our Lord be multiplied unto you in all abundance.`;
+      hindiText = `परमेश्वर पिता और हमारे प्रभु मसीह की ओर से अनुग्रह, दया और शान्ति तुम पर बहुतायत से प्रचुर मात्रा में होती रहे।`;
+    } else if (i === 7) {
+      text = `For the eyes of the Lord run to and fro throughout the whole earth, to show Himself strong on behalf of those whose heart is loyal toward Him.`;
+      hindiText = `क्योंकि प्रभु की दृष्टि सारी पृथ्वी पर फिरती है ताकि जिनका मन उसकी ओर सच्चा रहता है, वह अपनी सामर्थ्य उनके पक्ष में दिखाए।`;
+    }
 
     verses.push({
       book: book?.name || bookName,
       chapter: chapterNum,
       verse: i,
       text,
+      hindiText,
       testament,
     });
   }

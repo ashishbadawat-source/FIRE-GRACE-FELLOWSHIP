@@ -48,6 +48,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { uploadChurchMediaFile } from '../utils/uploader';
 import type {
   AdminStats,
   User as UserType,
@@ -265,76 +266,64 @@ export const AdminDashboard: React.FC = () => {
     showNotification(`फ़ाइल अपलोड हो रही है: ${file.name}...`);
 
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const dataUrl = reader.result as string;
+      let categoryTag = customCategory || uploadCategory;
+      if (targetContext === 'song_audio') categoryTag = 'Worship Audio Song';
+      if (targetContext === 'song_cover') categoryTag = 'Song Cover Art';
+      if (targetContext === 'sermon_video') categoryTag = 'Sermon Video Recording';
+      if (targetContext === 'sermon_audio') categoryTag = 'Sermon Audio Recording';
+      if (targetContext === 'photo') categoryTag = 'Church Photo Gallery';
+      if (targetContext === 'event_banner') categoryTag = 'Church Event Banner';
 
-        let categoryTag = customCategory || uploadCategory;
-        if (targetContext === 'song_audio') categoryTag = 'Worship Audio Song';
-        if (targetContext === 'song_cover') categoryTag = 'Song Cover Art';
-        if (targetContext === 'sermon_video') categoryTag = 'Sermon Video Recording';
-        if (targetContext === 'sermon_audio') categoryTag = 'Sermon Audio Recording';
-        if (targetContext === 'photo') categoryTag = 'Church Photo Gallery';
-        if (targetContext === 'event_banner') categoryTag = 'Church Event Banner';
-
-        const res = await api.uploadFile({
-          name: file.name,
-          dataUrl,
-          mimeType: file.type,
-          size: file.size,
+      const { url: uploadedUrl } = await uploadChurchMediaFile(
+        file,
+        {
           category: categoryTag,
           description: uploadDescription || `Uploaded via Admin Console for ${targetContext}`,
-        });
-
-        const uploadedUrl = res.file?.url || dataUrl;
-
-        // Auto-assign to corresponding form inputs
-        if (targetContext === 'song_audio') {
-          setSongAudioUrl(uploadedUrl);
-          if (!songTitle) {
-            setSongTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
-          }
-          showNotification(`🎵 ऑडियो गीत "${file.name}" सफलतापूर्वक अपलोड हो गया!`);
-        } else if (targetContext === 'song_cover') {
-          setSongCover(uploadedUrl);
-          showNotification(`🖼️ गीत कवर फोटो सफलतापूर्वक अपलोड हो गई!`);
-        } else if (targetContext === 'sermon_video') {
-          setSermonYoutube(uploadedUrl);
-          if (!sermonTitle) {
-            setSermonTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
-          }
-          showNotification(`🎬 वीडियो प्रवचन "${file.name}" सफलतापूर्वक अपलोड हो गया!`);
-        } else if (targetContext === 'sermon_audio') {
-          setSermonAudioUrl(uploadedUrl);
-          showNotification(`🎙️ प्रवचन ऑडियो MP3 सफलतापूर्वक अपलोड हो गया!`);
-        } else if (targetContext === 'sermon_thumb') {
-          setSermonThumb(uploadedUrl);
-          showNotification(`🖼️ वीडियो थंबनेल सफलतापूर्वक अपलोड हो गया!`);
-        } else if (targetContext === 'photo') {
-          setPhotoUrl(uploadedUrl);
-          if (!photoTitle) {
-            setPhotoTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
-          }
-          showNotification(`📸 फोटो "${file.name}" सफलतापूर्वक अपलोड हो गई!`);
-        } else if (targetContext === 'event_banner') {
-          setEventBanner(uploadedUrl);
-          showNotification(`🖼️ इवेंट बैनर सफलतापूर्वक अपलोड हो गया!`);
-        } else {
-          showNotification(`📁 फ़ाइल "${file.name}" सफलतापूर्वक अपलोड हो गई!`);
+        },
+        (percent, message) => {
+          showNotification(`${message} (${percent}%)`);
         }
+      );
 
-        // Refresh admin files
-        const fRes = await api.getAdminFiles();
-        setAdminFiles(fRes.files || []);
-        setIsUploading(false);
-      };
+      // Auto-assign to corresponding form inputs
+      if (targetContext === 'song_audio') {
+        setSongAudioUrl(uploadedUrl);
+        if (!songTitle) {
+          setSongTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+        }
+        showNotification(`🎵 ऑडियो गीत "${file.name}" सफलतापूर्वक अपलोड हो गया!`);
+      } else if (targetContext === 'song_cover') {
+        setSongCover(uploadedUrl);
+        showNotification(`🖼️ गीत कवर फोटो सफलतापूर्वक अपलोड हो गई!`);
+      } else if (targetContext === 'sermon_video') {
+        setSermonYoutube(uploadedUrl);
+        if (!sermonTitle) {
+          setSermonTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+        }
+        showNotification(`🎬 वीडियो प्रवचन "${file.name}" सफलतापूर्वक अपलोड हो गया!`);
+      } else if (targetContext === 'sermon_audio') {
+        setSermonAudioUrl(uploadedUrl);
+        showNotification(`🎙️ प्रवचन ऑडियो MP3 सफलतापूर्वक अपलोड हो गया!`);
+      } else if (targetContext === 'sermon_thumb') {
+        setSermonThumb(uploadedUrl);
+        showNotification(`🖼️ वीडियो थंबनेल सफलतापूर्वक अपलोड हो गया!`);
+      } else if (targetContext === 'photo') {
+        setPhotoUrl(uploadedUrl);
+        if (!photoTitle) {
+          setPhotoTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+        }
+        showNotification(`📸 फोटो "${file.name}" सफलतापूर्वक अपलोड हो गई!`);
+      } else if (targetContext === 'event_banner') {
+        setEventBanner(uploadedUrl);
+        showNotification(`🖼️ इवेंट बैनर सफलतापूर्वक अपलोड हो गया!`);
+      } else {
+        showNotification(`📁 फ़ाइल "${file.name}" सफलतापूर्वक अपलोड हो गई!`);
+      }
 
-      reader.onerror = () => {
-        setIsUploading(false);
-        alert('फ़ाइल पढ़ने में त्रुटि आई। कृपया पुनः प्रयास करें।');
-      };
-
-      reader.readAsDataURL(file);
+      // Refresh admin files
+      const fRes = await api.getAdminFiles();
+      setAdminFiles(fRes.files || []);
+      setIsUploading(false);
     } catch (err: any) {
       setIsUploading(false);
       alert(err.message || 'फ़ाइल अपलोड करने में विफल');

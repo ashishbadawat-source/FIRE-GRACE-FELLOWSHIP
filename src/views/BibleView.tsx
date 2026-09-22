@@ -20,6 +20,10 @@ import {
   BookMarked,
   ArrowRight,
   Flame,
+  Volume2,
+  VolumeX,
+  Languages,
+  Loader2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -38,6 +42,9 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
   const [selectedBook, setSelectedBook] = useState<string>('John');
   const [selectedChapter, setSelectedChapter] = useState<number>(1);
   const [verses, setVerses] = useState<BibleVerse[]>([]);
+  const [isLoadingVerses, setIsLoadingVerses] = useState<boolean>(false);
+  const [languageMode, setLanguageMode] = useState<'both' | 'hindi' | 'english'>('both');
+  const [isPlayingAudio, setIsPlayingAudio] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [bookFilterQuery, setBookFilterQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<BibleVerse[]>([]);
@@ -55,6 +62,26 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
   const [isLoadingTestimonies, setIsLoadingTestimonies] = useState<boolean>(false);
   const [showTestimonyBook, setShowTestimonyBook] = useState<boolean>(false);
 
+  // Verse speech playback
+  const handleToggleSpeak = (verseId: string, hindiText?: string, englishText?: string) => {
+    if (!('speechSynthesis' in window)) return;
+    if (isPlayingAudio === verseId) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const textToSpeak = (languageMode === 'english' ? englishText : (hindiText || englishText)) || '';
+    const lang = (languageMode === 'english' || (!hindiText && englishText)) ? 'en-US' : 'hi-IN';
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = lang;
+    utterance.rate = 0.9;
+    utterance.onend = () => setIsPlayingAudio(null);
+    utterance.onerror = () => setIsPlayingAudio(null);
+    setIsPlayingAudio(verseId);
+    window.speechSynthesis.speak(utterance);
+  };
+
   useEffect(() => {
     // Load dynamic books from server if available, fallback to ALL_66_BIBLE_BOOKS
     api.getBibleBooks().then(res => {
@@ -64,11 +91,19 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
     }).catch(() => {});
   }, []);
 
-  // Fetch chapter verses
+  // Fetch chapter verses with loading state
   useEffect(() => {
-    api.getBibleChapter(selectedBook, selectedChapter).then(res => {
-      setVerses(res.verses);
-    }).catch(() => {});
+    setIsLoadingVerses(true);
+    api.getBibleChapter(selectedBook, selectedChapter)
+      .then(res => {
+        if (res.verses && res.verses.length > 0) {
+          setVerses(res.verses);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setIsLoadingVerses(false);
+      });
   }, [selectedBook, selectedChapter]);
 
   // Fetch bookmarks if logged in
@@ -144,10 +179,29 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
   };
 
   const handleCopyVerse = (v: BibleVerse) => {
-    const text = `"${v.text}" — ${v.book} ${v.chapter}:${v.verse} (पवित्र शास्त्र)`;
+    const bookTitle = currentBookObj.hindiName ? `${currentBookObj.hindiName} (${v.book})` : v.book;
+    const body = v.hindiText ? `${v.hindiText}\n"${v.text}"` : `"${v.text}"`;
+    const text = `${bookTitle} ${v.chapter}:${v.verse}\n${body}\n— पवित्र शास्त्र बाईबल (Holy Bible)`;
     navigator.clipboard.writeText(text);
     setCopiedId(`${v.book}_${v.chapter}_${v.verse}`);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleShareVerse = (v: BibleVerse) => {
+    const bookTitle = currentBookObj.hindiName ? `${currentBookObj.hindiName} (${v.book})` : v.book;
+    const body = v.hindiText ? `${v.hindiText}\n"${v.text}"` : `"${v.text}"`;
+    const text = `${bookTitle} ${v.chapter}:${v.verse}\n${body}\n— Grace Fellowship Church`;
+    if (navigator.share) {
+      navigator.share({
+        title: `${bookTitle} ${v.chapter}:${v.verse}`,
+        text,
+        url: window.location.href,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(text);
+      setCopiedId(`${v.book}_${v.chapter}_${v.verse}`);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
   };
 
   const handleSaveBookmark = async (v: BibleVerse) => {
@@ -160,7 +214,7 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
         book: v.book,
         chapter: v.chapter,
         verse: v.verse,
-        text: v.text,
+        text: v.hindiText ? `${v.hindiText} | ${v.text}` : v.text,
       });
       setBookmarks(prev => [res.bookmark, ...prev]);
     } catch {
@@ -256,6 +310,42 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
               <span>बाईबल सर्च</span>
             </button>
           </form>
+        </div>
+
+        {/* Quick Instant Reading Jump Bar */}
+        <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-amber-400 flex items-center gap-1.5 shrink-0">
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>सीधे पढ़ें (Quick Read):</span>
+          </span>
+          {[
+            { name: 'John', chapter: 1, label: 'यूहन्ना 1 (John 1)' },
+            { name: 'Psalms', chapter: 23, label: 'भजन 23 (Psalm 23)' },
+            { name: 'Psalms', chapter: 91, label: 'भजन 91 (Psalm 91)' },
+            { name: 'Matthew', chapter: 5, label: 'मत्ती 5 (Matthew 5)' },
+            { name: 'Romans', chapter: 8, label: 'रोमियों 8 (Romans 8)' },
+            { name: 'Genesis', chapter: 1, label: 'उत्पत्ति 1 (Genesis 1)' },
+            { name: 'Philippians', chapter: 4, label: 'फिलिप्पियों 4 (Phil 4)' },
+          ].map(item => (
+            <button
+              key={item.label}
+              onClick={() => {
+                const b = books.find(bk => bk.name.toLowerCase() === item.name.toLowerCase()) || { name: item.name };
+                selectBookAndChapter(b as any, item.chapter);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-amber-500 hover:text-slate-950 text-slate-300 text-[11px] font-medium border border-slate-700/80 transition shadow-sm"
+            >
+              {item.label}
+            </button>
+          ))}
+          <button
+            onClick={() => setActiveTab('read')}
+            className="ml-auto px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:brightness-110 text-slate-950 text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>📖 पवित्र शास्त्र पढ़ें (Open Reader)</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
         </div>
 
         {/* Tab Controls & Quick Links */}
@@ -611,7 +701,7 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
           {/* Scripture Reading Content Pane (Col 8) */}
           <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
             {/* Chapter Header Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-bold font-cinzel text-white flex items-center gap-2">
                   <span>{currentBookObj.hindiName || currentBookObj.name}</span>
@@ -622,75 +712,211 @@ export const BibleView: React.FC<BibleViewProps> = ({ onNavigate }) => {
                 </p>
               </div>
 
-              {/* Prev / Next Chapter Buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePrevChapter}
-                  disabled={selectedChapter <= 1}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold text-slate-300 flex items-center gap-1"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span>पिछला</span>
-                </button>
-                <span className="text-xs font-mono text-amber-400 px-2">
-                  {selectedChapter} / {totalChapters}
-                </span>
-                <button
-                  onClick={handleNextChapter}
-                  disabled={selectedChapter >= totalChapters}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold text-slate-300 flex items-center gap-1"
-                >
-                  <span>अगला</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+              {/* Reader Controls: Language + Font Size + Navigation */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Language Switcher */}
+                <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                  <button
+                    onClick={() => setLanguageMode('both')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                      languageMode === 'both' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="हिंदी एवं अंग्रेजी दोनों"
+                  >
+                    दोनों (Both)
+                  </button>
+                  <button
+                    onClick={() => setLanguageMode('hindi')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                      languageMode === 'hindi' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="केवल हिंदी"
+                  >
+                    हिंदी
+                  </button>
+                  <button
+                    onClick={() => setLanguageMode('english')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                      languageMode === 'english' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="Only English"
+                  >
+                    English
+                  </button>
+                </div>
+
+                {/* Font Size */}
+                <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                  <button
+                    onClick={() => setFontSize('sm')}
+                    className={`px-2 py-1 rounded-lg font-medium transition ${
+                      fontSize === 'sm' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    A-
+                  </button>
+                  <button
+                    onClick={() => setFontSize('base')}
+                    className={`px-2 py-1 rounded-lg font-medium transition ${
+                      fontSize === 'base' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    A
+                  </button>
+                  <button
+                    onClick={() => setFontSize('lg')}
+                    className={`px-2 py-1 rounded-lg font-medium transition ${
+                      fontSize === 'lg' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    A+
+                  </button>
+                </div>
+
+                {/* Prev / Next Chapter Buttons */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={handlePrevChapter}
+                    disabled={selectedChapter <= 1}
+                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold text-slate-300 flex items-center justify-center transition"
+                    title="पिछला अध्याय"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs font-mono text-amber-400 px-1 font-bold">
+                    {selectedChapter}/{totalChapters}
+                  </span>
+                  <button
+                    onClick={handleNextChapter}
+                    disabled={selectedChapter >= totalChapters}
+                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold text-slate-300 flex items-center justify-center transition"
+                    title="अगला अध्याय"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Verses Container */}
-            <div className="space-y-4">
-              {verses.map(v => (
-                <div
-                  key={`${v.book}_${v.chapter}_${v.verse}`}
-                  className="group p-3.5 rounded-2xl bg-slate-950/60 border border-transparent hover:border-amber-500/30 transition flex gap-3.5 items-start"
+            {isLoadingVerses ? (
+              <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-400">
+                <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+                <p className="text-sm font-medium text-amber-300">
+                  {currentBookObj.hindiName || currentBookObj.name} अध्याय {selectedChapter} के पवित्र वचन लोड हो रहे हैं...
+                </p>
+              </div>
+            ) : verses.length === 0 ? (
+              <div className="py-16 text-center space-y-3">
+                <BookOpen className="w-10 h-10 text-amber-400/50 mx-auto" />
+                <p className="text-slate-300 text-sm">इस अध्याय के वचन लोड किए जा रहे हैं...</p>
+                <button
+                  onClick={() => {
+                    setIsLoadingVerses(true);
+                    api.getBibleChapter(selectedBook, selectedChapter)
+                      .then(res => setVerses(res.verses || []))
+                      .finally(() => setIsLoadingVerses(false));
+                  }}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
                 >
-                  <span className="font-mono text-xs font-bold text-amber-500 mt-0.5 shrink-0 select-none">
-                    {v.verse}
-                  </span>
-                  <p
-                    className={`flex-1 font-serif leading-relaxed text-slate-200 ${
-                      fontSize === 'sm' ? 'text-xs' : fontSize === 'lg' ? 'text-base' : 'text-sm'
-                    }`}
-                  >
-                    {v.text}
-                  </p>
+                  वचन पुनः लोड करें
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {verses.map(v => {
+                  const verseKey = `${v.book}_${v.chapter}_${v.verse}`;
+                  const isAudioActive = isPlayingAudio === verseKey;
+                  return (
+                    <div
+                      key={verseKey}
+                      className="group p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 hover:border-amber-500/40 transition-all flex gap-3.5 items-start"
+                    >
+                      <span className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 font-mono text-xs font-bold text-amber-400 flex items-center justify-center shrink-0 select-none mt-0.5">
+                        {v.verse}
+                      </span>
 
-                  <div className="opacity-0 group-hover:opacity-100 transition flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => handleCopyVerse(v)}
-                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white"
-                      title="Copy verse"
-                    >
-                      {copiedId === `${v.book}_${v.chapter}_${v.verse}` ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleSaveBookmark(v)}
-                      className={`p-1.5 rounded-lg transition ${
-                        isBookmarked(v)
-                          ? 'bg-amber-500 text-slate-950 font-bold'
-                          : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-400'
-                      }`}
-                      title={isBookmarked(v) ? 'Bookmarked' : 'Add to bookmarks'}
-                    >
-                      <Bookmark className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        {/* Hindi Verse */}
+                        {(languageMode === 'both' || languageMode === 'hindi') && (
+                          <p
+                            className={`font-serif leading-relaxed text-amber-50 font-medium ${
+                              fontSize === 'sm' ? 'text-sm' : fontSize === 'lg' ? 'text-lg' : 'text-base'
+                            }`}
+                          >
+                            {v.hindiText || v.text}
+                          </p>
+                        )}
+
+                        {/* English Verse */}
+                        {(languageMode === 'both' || languageMode === 'english') && v.text && (
+                          <p
+                            className={`font-serif leading-relaxed text-slate-300 ${
+                              languageMode === 'both'
+                                ? 'text-xs sm:text-sm pt-1 border-t border-slate-800/60 opacity-90'
+                                : fontSize === 'sm' ? 'text-xs' : fontSize === 'lg' ? 'text-base' : 'text-sm'
+                            }`}
+                          >
+                            {v.text}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition">
+                        {/* Audio Narration / Listen */}
+                        <button
+                          onClick={() => handleToggleSpeak(verseKey, v.hindiText, v.text)}
+                          className={`p-1.5 rounded-lg transition ${
+                            isAudioActive
+                              ? 'bg-amber-500 text-slate-950 animate-pulse font-bold'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-300'
+                          }`}
+                          title={isAudioActive ? 'आवाज बंद करें (Stop Audio)' : 'वचन सुनें (Listen to Verse)'}
+                        >
+                          {isAudioActive ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                        </button>
+
+                        {/* Copy Verse */}
+                        <button
+                          onClick={() => handleCopyVerse(v)}
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+                          title="वचन कॉपी करें (Copy Verse)"
+                        >
+                          {copiedId === verseKey ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+
+                        {/* Share Verse */}
+                        <button
+                          onClick={() => handleShareVerse(v)}
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-300 transition"
+                          title="वचन शेयर करें (Share Verse)"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Bookmark Verse */}
+                        <button
+                          onClick={() => handleSaveBookmark(v)}
+                          className={`p-1.5 rounded-lg transition ${
+                            isBookmarked(v)
+                              ? 'bg-amber-500 text-slate-950 font-bold'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-400'
+                          }`}
+                          title={isBookmarked(v) ? 'बुकमार्क किया गया' : 'बुकमार्क में जोड़ें'}
+                        >
+                          <Bookmark className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Bottom Nav Bar */}
             <div className="pt-6 border-t border-slate-800 flex items-center justify-between">

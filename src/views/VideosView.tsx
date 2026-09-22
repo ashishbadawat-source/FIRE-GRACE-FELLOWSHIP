@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { downloadMediaFile } from '../utils/downloader';
+import { uploadChurchMediaFile } from '../utils/uploader';
 import type { VideoItem } from '../types';
 
 interface ParsedVideo {
@@ -151,62 +152,43 @@ export const VideosView: React.FC = () => {
     setUploadProgress(`वीडियो प्रोसेस और अपलोड हो रहा है (${(file.size / (1024 * 1024)).toFixed(1)} MB)...`);
 
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const dataUrl = reader.result as string;
-          const res = await api.uploadFile({
-            name: file.name,
-            dataUrl,
-            mimeType: file.type || 'video/mp4',
-            size: file.size,
-            category: 'Church Video Archive',
-            type: 'video',
-          });
-          const uploadedUrl = res.file?.url || dataUrl;
-          setNewVideoUrl(uploadedUrl);
-          if (!newVideoTitle.trim()) {
-            setNewVideoTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
-          }
-          setUploadSuccess(`वीडियो "${file.name}" सफलतापूर्वक अपलोड हो गया!`);
-        } catch (err: any) {
-          setUploadError(err.message || 'वीडियो अपलोड करने में विफल रहा।');
-        } finally {
-          setIsUploading(false);
-          setUploadProgress('');
+      const { url } = await uploadChurchMediaFile(
+        file,
+        {
+          category: 'Church Video Archive',
+          type: 'video',
+          description: `Video recording ${file.name}`,
+        },
+        (percent, message) => {
+          setUploadProgress(`${message} (${percent}%)`);
         }
-      };
-      reader.onerror = () => {
-        setIsUploading(false);
-        setUploadError('फ़ाइल पढ़ने में त्रुटि हुई।');
-      };
-      reader.readAsDataURL(file);
-    } catch (e: any) {
+      );
+
+      setNewVideoUrl(url);
+      if (!newVideoTitle.trim()) {
+        setNewVideoTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+      }
+      setUploadSuccess(`वीडियो "${file.name}" सफलतापूर्वक अपलोड हो गया!`);
+    } catch (err: any) {
+      setUploadError(err.message || 'वीडियो अपलोड करने में विफल रहा। कृपया पुन: प्रयास करें।');
+    } finally {
       setIsUploading(false);
-      setUploadError(e.message || 'फ़ाइल चयन में त्रुटि हुई');
+      setUploadProgress('');
     }
   };
 
   // Thumbnail File Upload Handler
-  const handleThumbFileUpload = (file: File) => {
+  const handleThumbFileUpload = async (file: File) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const dataUrl = reader.result as string;
-        const res = await api.uploadFile({
-          name: file.name,
-          dataUrl,
-          mimeType: file.type,
-          category: 'Video Thumbnail',
-          type: 'image',
-        });
-        setNewVideoThumbnail(res.file?.url || dataUrl);
-      } catch (err: any) {
-        alert('थंबनेल अपलोड में समस्या हुई।');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const { url } = await uploadChurchMediaFile(file, {
+        category: 'Video Thumbnail',
+        type: 'image',
+      });
+      setNewVideoThumbnail(url);
+    } catch (err: any) {
+      alert(err.message || 'थंबनेल अपलोड में समस्या हुई।');
+    }
   };
 
   // Submit New Video

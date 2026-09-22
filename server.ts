@@ -929,6 +929,35 @@ app.post('/api/admin/photos', adminRequired, (req, res) => {
   res.status(201).json({ message: 'Photo uploaded successfully.', photo: newPhoto });
 });
 
+// Community / Member photo submission to gallery
+app.post('/api/photos', (req, res) => {
+  const { albumId, title, url, description } = req.body;
+  if (!url) {
+    res.status(400).json({ error: 'Photo URL is required.' });
+    return;
+  }
+  const data = db.getData();
+  const targetAlbumId = albumId && albumId !== 'all' ? albumId : (data.photoAlbums[0] ? data.photoAlbums[0].id : 'album_1');
+  const newPhoto = {
+    id: `ph_${Date.now()}`,
+    albumId: targetAlbumId,
+    title: title?.trim() || 'Church Photo',
+    url,
+    description: description?.trim() || '',
+    featured: false,
+    date: new Date().toISOString().split('T')[0],
+  };
+  data.photos.unshift(newPhoto);
+
+  const album = data.photoAlbums.find(a => a.id === targetAlbumId);
+  if (album) {
+    album.photosCount = data.photos.filter(p => p.albumId === targetAlbumId).length;
+  }
+
+  db.save();
+  res.status(201).json({ message: 'फोटो सफलतापूर्वक गैलरी में जोड़ दी गई है!', photo: newPhoto });
+});
+
 app.delete('/api/admin/photos/:id', adminRequired, (req, res) => {
   const data = db.getData();
   const photo = data.photos.find(p => p.id === req.params.id);
@@ -1178,6 +1207,102 @@ app.post('/api/upload', (req, res) => {
     message: 'फ़ाइल सफलतापूर्वक अपलोड हो गई है (Uploaded successfully).',
     file: newFile,
   });
+});
+
+// Chunked file upload endpoint for large audio and video files (bypasses reverse proxy size caps)
+const CHUNK_TEMP_DIR = path.join(process.cwd(), 'uploads', 'temp');
+if (!fs.existsSync(CHUNK_TEMP_DIR)) {
+  fs.mkdirSync(CHUNK_TEMP_DIR, { recursive: true });
+}
+
+app.post('/api/upload/chunk', (req, res) => {
+  try {
+    const { uploadId, chunkIndex, totalChunks, fileName, mimeType, category, description, chunkBase64, totalSize } = req.body;
+    if (!uploadId || chunkIndex === undefined || !totalChunks || !chunkBase64 || !fileName) {
+      res.status(400).json({ error: 'Missing required chunk parameters.' });
+      return;
+    }
+
+    const tempFilePath = path.join(CHUNK_TEMP_DIR, `upload_${uploadId}.tmp`);
+    const commaIdx = chunkBase64.indexOf(',');
+    const rawData = commaIdx !== -1 ? chunkBase64.substring(commaIdx + 1) : chunkBase64;
+    const chunkBuffer = Buffer.from(rawData, 'base64');
+
+    if (chunkIndex === 0) {
+      fs.writeFileSync(tempFilePath, chunkBuffer);
+    } else {
+      fs.appendFileSync(tempFilePath, chunkBuffer);
+    }
+
+    // If this is the last chunk, finalize the file
+    if (chunkIndex === totalChunks - 1) {
+      let ext = path.extname(fileName).toLowerCase();
+      if (!ext) {
+        const cleanMime = (mimeType || '').toLowerCase();
+        if (cleanMime.includes('audio') || cleanMime.includes('mp3')) ext = '.mp3';
+        else if (cleanMime.includes('video') || cleanMime.includes('mp4')) ext = '.mp4';
+        else if (cleanMime.includes('image')) ext = '.jpg';
+        else ext = '.bin';
+      }
+
+      const safeBase = path.basename(fileName, ext).replace(/[^a-zA-Z0-9_\u0900-\u097F-]/g, '_').substring(0, 40) || 'file';
+      const uniqueName = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}_${safeBase}${ext}`;
+      const finalPath = path.join(UPLOADS_DIR, uniqueName);
+
+      fs.renameSync(tempFilePath, finalPath);
+      const stat = fs.statSync(finalPath);
+
+      let determinedType: 'audio' | 'video' | 'image' | 'document' | 'other' = 'other';
+      const cleanMime = (mimeType || '').toLowerCase();
+      const cleanName = fileName.toLowerCase();
+      if (cleanMime.startsWith('audio/') || cleanName.endsWith('.mp3') || cleanName.endsWith('.wav') || cleanName.endsWith('.m4a') || cleanName.endsWith('.aac')) {
+        determinedType = 'audio';
+      } else if (cleanMime.startsWith('video/') || cleanName.endsWith('.mp4') || cleanName.endsWith('.mov') || cleanName.endsWith('.webm') || cleanName.endsWith('.mkv')) {
+        determinedType = 'video';
+      } else if (cleanMime.startsWith('image/') || cleanName.endsWith('.jpg') || cleanName.endsWith('.png') || cleanName.endsWith('.webp')) {
+        determinedType = 'image';
+      } else if (cleanMime.includes('pdf') || cleanName.endsWith('.pdf')) {
+        determinedType = 'document';
+      }
+
+      const data = db.getData();
+      if (!data.uploadedFiles) data.uploadedFiles = [];
+
+      const newFile = {
+        id: `file_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: fileName.trim(),
+        type: determinedType,
+        mimeType: mimeType || 'application/octet-stream',
+        size: stat.size || totalSize || 0,
+        url: `/uploads/${uniqueName}`,
+        category: category || 'Community Media',
+        description: description || '',
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: 'Fellowship Contributor',
+      };
+
+      data.uploadedFiles.unshift(newFile);
+      db.save();
+
+      res.status(201).json({
+        message: 'फ़ाइल सफलतापूर्वक अपलोड हो गई है (Uploaded successfully).',
+        file: newFile,
+        done: true,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      done: false,
+      chunkIndex,
+      totalChunks,
+      progress: Math.round(((chunkIndex + 1) / totalChunks) * 100),
+    });
+  } catch (err: any) {
+    console.error('Error during chunk upload:', err);
+    res.status(500).json({ error: err.message || 'Chunk upload failed' });
+  }
 });
 
 app.delete('/api/admin/files/:id', adminRequired, (req, res) => {

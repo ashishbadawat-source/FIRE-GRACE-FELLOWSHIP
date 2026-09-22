@@ -41,6 +41,7 @@ import {
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { downloadMediaFile } from '../utils/downloader';
+import { uploadChurchMediaFile } from '../utils/uploader';
 import type { AudioSong } from '../types';
 
 interface SongsViewProps {
@@ -295,65 +296,46 @@ export const SongsView: React.FC<SongsViewProps> = ({ onNavigate }) => {
     }
 
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const dataUrl = reader.result as string;
-          const res = await api.uploadFile({
-            name: file.name,
-            dataUrl,
-            mimeType: file.type || 'audio/mpeg',
-            size: file.size,
-            category: 'Worship Audio Song',
-            type: 'audio',
-          });
-          const uploadedUrl = res.file?.url || dataUrl;
-          setNewAudioUrl(uploadedUrl);
-          if (!newTitle.trim()) {
-            setNewTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
-          }
-          setAddSongSuccess(`ऑडियो फ़ाइल "${file.name}" सफलतापूर्वक अपलोड हो गई!`);
-        } catch (err: any) {
-          setAddSongError(err.message || 'ऑडियो अपलोड करने में समस्या हुई।');
-        } finally {
-          setIsUploadingAudio(false);
-          setAudioUploadProgress('');
+      const { url } = await uploadChurchMediaFile(
+        file,
+        {
+          category: 'Worship Audio Song',
+          type: 'audio',
+          description: `Audio song ${file.name}`,
+        },
+        (percent, message) => {
+          setAudioUploadProgress(`${message} (${percent}%)`);
         }
-      };
-      reader.onerror = () => {
-        setIsUploadingAudio(false);
-        setAddSongError('फ़ाइल पढ़ने में त्रुटि हुई।');
-      };
-      reader.readAsDataURL(file);
+      );
+
+      setNewAudioUrl(url);
+      if (!newTitle.trim()) {
+        setNewTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+      }
+      setAddSongSuccess(`ऑडियो फ़ाइल "${file.name}" सफलतापूर्वक अपलोड हो गई!`);
     } catch (err: any) {
+      setAddSongError(err.message || 'ऑडियो अपलोड करने में समस्या हुई। कृपया पुन: प्रयास करें।');
+    } finally {
       setIsUploadingAudio(false);
-      setAddSongError(err.message || 'त्रुटि हुई');
+      setAudioUploadProgress('');
     }
   };
 
   // Direct Cover File Upload
-  const handleCoverFileUpload = (file: File) => {
+  const handleCoverFileUpload = async (file: File) => {
     if (!file) return;
     setIsUploadingCover(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const dataUrl = reader.result as string;
-        const res = await api.uploadFile({
-          name: file.name,
-          dataUrl,
-          mimeType: file.type || 'image/jpeg',
-          category: 'Song Cover Art',
-          type: 'image',
-        });
-        setNewCoverImage(res.file?.url || dataUrl);
-      } catch {
-        alert('कवर फोटो अपलोड में समस्या हुई।');
-      } finally {
-        setIsUploadingCover(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const { url } = await uploadChurchMediaFile(file, {
+        category: 'Song Cover Art',
+        type: 'image',
+      });
+      setNewCoverImage(url);
+    } catch (err: any) {
+      alert(err.message || 'कवर फोटो अपलोड में समस्या हुई।');
+    } finally {
+      setIsUploadingCover(false);
+    }
   };
 
   // Submit New Song
