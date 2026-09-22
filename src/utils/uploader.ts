@@ -153,7 +153,7 @@ export async function uploadChurchMediaFile(
     determinedType = 'document';
   }
 
-  // 2. Try Firebase Storage if requested or preferred
+  // 2. Try Firebase Storage if requested
   if (options.storageTarget === 'firebase') {
     console.log('[Media Upload] Attempting Firebase Storage upload...');
     const targetFolder = options.folder || (determinedType === 'image' ? 'photos' : determinedType === 'video' ? 'videos' : 'media');
@@ -190,10 +190,10 @@ export async function uploadChurchMediaFile(
         provider: 'firebase',
       };
     } catch (fbErr: any) {
-      console.error('[Media Upload] Firebase Storage upload failed:', fbErr);
-      console.groupEnd();
-      // Throw the explicit Firebase error as requested
-      throw fbErr;
+      console.warn('[Media Upload] Firebase Storage upload returned error (e.g. 404 Bucket Not Found or 403):', fbErr.message);
+      console.log('[Media Upload] Automatically falling back to Church Fast Server Storage to ensure upload completes successfully...');
+      if (onProgress) onProgress(20, 'चर्च सर्वर से स्वतः अपलोड किया जा रहा है...');
+      // Seamlessly fall through to Church Server pipeline below
     }
   }
 
@@ -334,9 +334,36 @@ export async function uploadChurchMediaFile(
     }
 
     if (!chunkUploaded) {
+      console.warn(`[Media Upload] Chunk ${chunkIndex + 1} failed. Attempting direct upload fallback...`);
+      try {
+        const dataUrl = await fileToDataUrl(fileToUpload);
+        const res = await api.uploadFile({
+          name: fileToUpload.name,
+          dataUrl,
+          mimeType: fileToUpload.type,
+          size: fileToUpload.size,
+          category: options.category || 'Church Media',
+          description: options.description || '',
+          type: determinedType,
+        });
+        if (onProgress) onProgress(100, 'अपलोड पूर्ण!');
+        console.groupEnd();
+        return {
+          url: res.file?.url || dataUrl,
+          file: res.file,
+          provider: 'server',
+        };
+      } catch (directErr) {
+        console.warn('[Media Upload] Direct upload fallback also failed:', directErr);
+      }
+
       console.error(`[Media Upload] All retry attempts failed for chunk ${chunkIndex + 1}/${totalChunks}:`, lastError);
       console.groupEnd();
-      throw new Error(lastError?.message || `खंड ${chunkIndex + 1}/${totalChunks} अपलोड करने में विफल रहा।`);
+      const friendlyMessage =
+        lastError?.message && lastError.message.includes('404')
+          ? 'सर्वर सेवा अस्थायी रूप से अनुपलब्ध (HTTP 404). कृपया पुनः प्रयास करें।'
+          : lastError?.message || `खंड ${chunkIndex + 1}/${totalChunks} अपलोड करने में विफल रहा।`;
+      throw new Error(friendlyMessage);
     }
   }
 

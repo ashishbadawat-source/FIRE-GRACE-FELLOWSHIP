@@ -1229,10 +1229,23 @@ app.post(
       const uploadId = (req.query.uploadId as string) || '';
       const chunkIndex = parseInt(req.query.chunkIndex as string, 10);
       const totalChunks = parseInt(req.query.totalChunks as string, 10);
-      const fileName = decodeURIComponent((req.query.fileName as string) || 'media.bin');
-      const mimeType = decodeURIComponent((req.query.mimeType as string) || 'application/octet-stream');
-      const category = decodeURIComponent((req.query.category as string) || 'Community Media');
-      const description = decodeURIComponent((req.query.description as string) || '');
+
+      const rawFileName = (req.query.fileName as string) || 'media.bin';
+      let fileName = rawFileName;
+      try { fileName = decodeURIComponent(rawFileName); } catch {}
+
+      const rawMime = (req.query.mimeType as string) || 'application/octet-stream';
+      let mimeType = rawMime;
+      try { mimeType = decodeURIComponent(rawMime); } catch {}
+
+      const rawCat = (req.query.category as string) || 'Community Media';
+      let category = rawCat;
+      try { category = decodeURIComponent(rawCat); } catch {}
+
+      const rawDesc = (req.query.description as string) || '';
+      let description = rawDesc;
+      try { description = decodeURIComponent(rawDesc); } catch {}
+
       const totalSize = parseInt(req.query.totalSize as string, 10) || 0;
       const offsetParam = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
 

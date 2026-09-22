@@ -27,7 +27,7 @@ export const PhotosView: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [uploadError, setUploadError] = useState('');
-  const [storageTarget, setStorageTarget] = useState<'auto' | 'firebase' | 'server'>('auto');
+  const [storageTarget, setStorageTarget] = useState<'auto' | 'firebase' | 'server'>('server');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchAlbums = () => {

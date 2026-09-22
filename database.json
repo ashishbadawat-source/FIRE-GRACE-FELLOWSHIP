@@ -825,6 +825,42 @@
   },
   "uploadedFiles": [
     {
+      "id": "file_1790065304972_vhsf",
+      "name": "direct_test.png",
+      "type": "image",
+      "mimeType": "image/png",
+      "size": 70,
+      "url": "/uploads/1790065304972_dui3_direct_test.png",
+      "category": "Church Photo Gallery",
+      "description": "Direct test",
+      "uploadedAt": "2026-09-22T08:21:44.972Z",
+      "uploadedBy": "Fellowship Contributor"
+    },
+    {
+      "id": "file_1790065304947_fazp",
+      "name": "holy_cross_test.png",
+      "type": "image",
+      "mimeType": "image/png",
+      "size": 13,
+      "url": "/uploads/1790065304946_z680_holy_cross_test.png",
+      "category": "Church Photo Gallery",
+      "description": "Testing fix",
+      "uploadedAt": "2026-09-22T08:21:44.947Z",
+      "uploadedBy": "Fellowship Contributor"
+    },
+    {
+      "id": "file_1790065160328_sq4c",
+      "name": "test.jpg",
+      "type": "image",
+      "mimeType": "image/jpeg",
+      "size": 4,
+      "url": "/uploads/1790065160327_o8za_test.jpg",
+      "category": "Church Photo Gallery",
+      "description": "test",
+      "uploadedAt": "2026-09-22T08:19:20.328Z",
+      "uploadedBy": "Fellowship Contributor"
+    },
+    {
       "id": "file_1790063887543_l2f3",
       "name": "worship_choir_video.mp4",
       "type": "video",

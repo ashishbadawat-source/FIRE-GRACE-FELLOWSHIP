@@ -75,28 +75,28 @@ export async function uploadToFirebaseStorage(
           path: destinationPath,
         });
 
+        const is404 =
+          error.code === 'storage/bucket-not-found' ||
+          (typeof error.serverResponse === 'string' && error.serverResponse.includes('404')) ||
+          (typeof error.message === 'string' && (error.message.includes('404') || error.message.toLowerCase().includes('not found')));
+
         let userFacingError = '';
-        switch (error.code) {
-          case 'storage/unauthorized':
-            userFacingError = `Firebase Storage अनुमति अस्वीकृत (storage/unauthorized): फ़ायरबेस स्टोरेज रूल्स ने अपलोड अस्वीकार कर दिया। कृपया सुनिश्चित करें कि आप लॉग इन हैं या स्टोरेज रूल्स 'allow write: if true;' पर सेट हैं।`;
-            break;
-          case 'storage/bucket-not-found':
-            userFacingError = `Firebase Storage बकेट '${firebaseConfig.storageBucket}' नहीं मिली (storage/bucket-not-found). कृपया Firebase Console में स्टोरेज सक्रिय करें।`;
-            break;
-          case 'storage/quota-exceeded':
-            userFacingError = `Firebase Storage कोटा समाप्त हो गया है (storage/quota-exceeded).`;
-            break;
-          case 'storage/retry-limit-exceeded':
-            userFacingError = `Firebase Storage अपलोड टाइमआउट (storage/retry-limit-exceeded). कृपया इंटरनेट कनेक्शन जांचें।`;
-            break;
-          case 'storage/canceled':
-            userFacingError = `Firebase Storage अपलोड रद्द कर दिया गया (storage/canceled).`;
-            break;
-          default:
-            userFacingError = `Firebase Storage त्रुटि (${error.code || 'UNKNOWN'}): ${error.message || 'फ़ाइल अपलोड में समस्या आई।'}`;
+        if (is404) {
+          userFacingError = `Firebase Storage बकेट '${firebaseConfig.storageBucket}' सक्रिय नहीं है (HTTP 404 - Bucket Not Provisioned). चर्च सर्वर स्टोरेज का उपयोग करें।`;
+        } else if (error.code === 'storage/unauthorized') {
+          userFacingError = `Firebase Storage अनुमति अस्वीकृत (storage/unauthorized): फ़ायरबेस स्टोरेज रूल्स ने अपलोड अस्वीकार कर दिया।`;
+        } else if (error.code === 'storage/quota-exceeded') {
+          userFacingError = `Firebase Storage कोटा समाप्त हो गया है (storage/quota-exceeded).`;
+        } else if (error.code === 'storage/retry-limit-exceeded') {
+          userFacingError = `Firebase Storage अपलोड टाइमआउट (storage/retry-limit-exceeded). कृपया इंटरनेट कनेक्शन जांचें।`;
+        } else if (error.code === 'storage/canceled') {
+          userFacingError = `Firebase Storage अपलोड रद्द कर दिया गया (storage/canceled).`;
+        } else {
+          userFacingError = `Firebase Storage त्रुटि (${error.code || 'UNKNOWN'}): ${error.message || 'फ़ाइल अपलोड में समस्या आई।'}`;
         }
 
         const enrichedError: any = new Error(userFacingError);
+        enrichedError.is404 = is404;
         enrichedError.firebaseCode = error.code;
         enrichedError.originalMessage = error.message;
         reject(enrichedError);

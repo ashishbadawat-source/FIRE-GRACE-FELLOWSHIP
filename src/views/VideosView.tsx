@@ -104,7 +104,7 @@ export const VideosView: React.FC = () => {
   const [newVideoDuration, setNewVideoDuration] = useState('15:00');
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
-  const [videoStorageTarget, setVideoStorageTarget] = useState<'auto' | 'firebase' | 'server'>('auto');
+  const [videoStorageTarget, setVideoStorageTarget] = useState<'auto' | 'firebase' | 'server'>('server');
   const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
 
   useEffect(() => {
