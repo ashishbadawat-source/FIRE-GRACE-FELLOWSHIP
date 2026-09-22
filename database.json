@@ -825,6 +825,42 @@
   },
   "uploadedFiles": [
     {
+      "id": "file_1790066618047_hrol",
+      "name": "verification_test.jpg",
+      "type": "image",
+      "mimeType": "image/jpeg",
+      "size": 17,
+      "url": "/uploads/1790066618046_wnuj_verification_test.jpg",
+      "category": "Test",
+      "description": "",
+      "uploadedAt": "2026-09-22T08:43:38.047Z",
+      "uploadedBy": "Fellowship Contributor"
+    },
+    {
+      "id": "file_1790066458583_smqh",
+      "name": "nginx_test.jpg",
+      "type": "image",
+      "mimeType": "image/jpeg",
+      "size": 100,
+      "url": "/uploads/1790066458583_dun4_nginx_test.jpg",
+      "category": "Test",
+      "description": "Test",
+      "uploadedAt": "2026-09-22T08:40:58.583Z",
+      "uploadedBy": "Fellowship Contributor"
+    },
+    {
+      "id": "file_1790066451770_vfn3",
+      "name": "multi_test.jpg",
+      "type": "image",
+      "mimeType": "image/jpeg",
+      "size": 1228800,
+      "url": "/uploads/1790066451768_mkwv_multi_test.jpg",
+      "category": "Test",
+      "description": "Test",
+      "uploadedAt": "2026-09-22T08:40:51.771Z",
+      "uploadedBy": "Fellowship Contributor"
+    },
+    {
       "id": "file_1790065304972_vhsf",
       "name": "direct_test.png",
       "type": "image",

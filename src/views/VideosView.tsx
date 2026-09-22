@@ -549,25 +549,25 @@ export const VideosView: React.FC = () => {
             </div>
 
             {uploadError && (
-              <div className="p-3.5 rounded-xl bg-red-950/70 border border-red-500/50 text-red-200 text-xs space-y-2">
+              <div className="p-3.5 rounded-xl bg-red-950/70 border border-red-500/50 text-red-200 text-xs space-y-2.5">
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="font-semibold text-red-300">वीडियो अपलोड त्रुटि विवरण (Upload Error Details):</p>
+                    <p className="font-semibold text-red-300">वीडियो अपलोड स्थिति विवरण (Upload Status):</p>
                     <p className="leading-relaxed">{uploadError}</p>
                   </div>
                 </div>
-                {(uploadError.includes('Firebase') || uploadError.includes('unauthorized') || uploadError.includes('अस्वीकृत')) && selectedVideoFile && (
+                {selectedVideoFile && (
                   <button
                     type="button"
                     onClick={() => {
                       setVideoStorageTarget('server');
                       handleVideoFileUpload(selectedVideoFile, 'server');
                     }}
-                    className="w-full mt-2 py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition flex items-center justify-center gap-1.5 shadow"
+                    className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition flex items-center justify-center gap-2 shadow cursor-pointer"
                   >
-                    <Server className="w-3.5 h-3.5" />
-                    Church Fast Server स्टोरेज से तुरंत पुनः अपलोड करें
+                    <Server className="w-4 h-4" />
+                    Church Fast Server से तुरंत पुनः अपलोड करें (Click to Retry)
                   </button>
                 )}
               </div>
