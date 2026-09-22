@@ -377,24 +377,15 @@ export const api = {
     type?: string;
   }) => {
     const auth = getAuthHeader();
-    const url = auth.Authorization ? `${BASE_URL}/api/admin/upload` : `${BASE_URL}/api/upload`;
     try {
-      const res = await fetch(url, {
+      const res = await fetch(`${BASE_URL}/api/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...auth },
         body: JSON.stringify(payload),
       });
-      if (!res.ok && (res.status === 403 || res.status === 401)) {
-        const fallbackRes = await fetch(`${BASE_URL}/api/upload`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        return handleResponse<{ message: string; file: any }>(fallbackRes);
-      }
       return handleResponse<{ message: string; file: any }>(res);
     } catch (err: any) {
-      throw new Error(err.message || 'फ़ाइल अपलोड करने में विफल रहा। कृपया फ़ाइल का आकार जांचें।');
+      throw new Error(err.message || 'फ़ाइल अपलोड करने में विफल रहा।');
     }
   },
 

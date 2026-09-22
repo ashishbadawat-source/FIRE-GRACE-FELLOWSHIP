@@ -1184,6 +1184,11 @@ app.post('/api/upload', (req, res) => {
 
   const saved = saveBase64FileToDisk(dataUrl, name, mimeType);
 
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : (req.query.token as string);
+  const session = verifyToken(token);
+  const u = session ? db.getData().users.find(usr => usr.id === session.userId) : null;
+
   const data = db.getData();
   if (!data.uploadedFiles) data.uploadedFiles = [];
 
@@ -1197,7 +1202,7 @@ app.post('/api/upload', (req, res) => {
     category: category || 'Community Media',
     description: description || '',
     uploadedAt: new Date().toISOString(),
-    uploadedBy: 'Fellowship Contributor',
+    uploadedBy: u ? u.fullName : 'Fellowship Contributor',
   };
 
   data.uploadedFiles.unshift(newFile);
@@ -1209,15 +1214,125 @@ app.post('/api/upload', (req, res) => {
   });
 });
 
-// Chunked file upload endpoint for large audio and video files (bypasses reverse proxy size caps)
+// Chunked file upload storage setup
 const CHUNK_TEMP_DIR = path.join(process.cwd(), 'uploads', 'temp');
 if (!fs.existsSync(CHUNK_TEMP_DIR)) {
   fs.mkdirSync(CHUNK_TEMP_DIR, { recursive: true });
 }
 
+// 1. Raw Binary Chunk Upload Endpoint (Fastest, zero base64 overhead, perfect for mobile)
+app.post(
+  '/api/upload/chunk-binary',
+  express.raw({ type: 'application/octet-stream', limit: '20mb' }),
+  (req, res) => {
+    try {
+      const uploadId = (req.query.uploadId as string) || '';
+      const chunkIndex = parseInt(req.query.chunkIndex as string, 10);
+      const totalChunks = parseInt(req.query.totalChunks as string, 10);
+      const fileName = decodeURIComponent((req.query.fileName as string) || 'media.bin');
+      const mimeType = decodeURIComponent((req.query.mimeType as string) || 'application/octet-stream');
+      const category = decodeURIComponent((req.query.category as string) || 'Community Media');
+      const description = decodeURIComponent((req.query.description as string) || '');
+      const totalSize = parseInt(req.query.totalSize as string, 10) || 0;
+      const offsetParam = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+
+      if (!uploadId || isNaN(chunkIndex) || isNaN(totalChunks) || !req.body) {
+        res.status(400).json({ error: 'Missing required binary chunk parameters.' });
+        return;
+      }
+
+      const tempFilePath = path.join(CHUNK_TEMP_DIR, `upload_${uploadId}.tmp`);
+      const chunkBuffer: Buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body);
+
+      // Safe offset-based writing
+      const byteOffset = offsetParam !== undefined ? offsetParam : chunkIndex * chunkBuffer.length;
+      if (chunkIndex === 0 && !fs.existsSync(tempFilePath)) {
+        fs.writeFileSync(tempFilePath, chunkBuffer);
+      } else {
+        const fd = fs.openSync(tempFilePath, fs.existsSync(tempFilePath) ? 'r+' : 'w');
+        fs.writeSync(fd, chunkBuffer, 0, chunkBuffer.length, byteOffset);
+        fs.closeSync(fd);
+      }
+
+      // If last chunk, assemble and finalize
+      if (chunkIndex === totalChunks - 1) {
+        let ext = path.extname(fileName).toLowerCase();
+        if (!ext) {
+          const cleanMime = mimeType.toLowerCase();
+          if (cleanMime.includes('audio') || cleanMime.includes('mp3')) ext = '.mp3';
+          else if (cleanMime.includes('video') || cleanMime.includes('mp4')) ext = '.mp4';
+          else if (cleanMime.includes('image')) ext = '.jpg';
+          else ext = '.bin';
+        }
+
+        const safeBase = path.basename(fileName, ext).replace(/[^a-zA-Z0-9_\u0900-\u097F-]/g, '_').substring(0, 40) || 'file';
+        const uniqueName = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}_${safeBase}${ext}`;
+        const finalPath = path.join(UPLOADS_DIR, uniqueName);
+
+        // Copy and remove temp to prevent EXDEV cross-device errors
+        fs.copyFileSync(tempFilePath, finalPath);
+        try { fs.unlinkSync(tempFilePath); } catch {}
+
+        const stat = fs.statSync(finalPath);
+
+        let determinedType: 'audio' | 'video' | 'image' | 'document' | 'other' = 'other';
+        const cleanMime = mimeType.toLowerCase();
+        const cleanName = fileName.toLowerCase();
+        if (cleanMime.startsWith('audio/') || cleanName.endsWith('.mp3') || cleanName.endsWith('.wav') || cleanName.endsWith('.m4a') || cleanName.endsWith('.aac')) {
+          determinedType = 'audio';
+        } else if (cleanMime.startsWith('video/') || cleanName.endsWith('.mp4') || cleanName.endsWith('.mov') || cleanName.endsWith('.webm') || cleanName.endsWith('.mkv')) {
+          determinedType = 'video';
+        } else if (cleanMime.startsWith('image/') || cleanName.endsWith('.jpg') || cleanName.endsWith('.png') || cleanName.endsWith('.webp')) {
+          determinedType = 'image';
+        } else if (cleanMime.includes('pdf') || cleanName.endsWith('.pdf')) {
+          determinedType = 'document';
+        }
+
+        const data = db.getData();
+        if (!data.uploadedFiles) data.uploadedFiles = [];
+
+        const newFile = {
+          id: `file_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          name: fileName.trim(),
+          type: determinedType,
+          mimeType: mimeType || 'application/octet-stream',
+          size: stat.size || totalSize || 0,
+          url: `/uploads/${uniqueName}`,
+          category: category || 'Community Media',
+          description: description || '',
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: 'Fellowship Contributor',
+        };
+
+        data.uploadedFiles.unshift(newFile);
+        db.save();
+
+        res.status(201).json({
+          message: 'फ़ाइल सफलतापूर्वक अपलोड हो गई है (Uploaded successfully).',
+          file: newFile,
+          done: true,
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        done: false,
+        chunkIndex,
+        totalChunks,
+        progress: Math.round(((chunkIndex + 1) / totalChunks) * 100),
+      });
+    } catch (err: any) {
+      console.error('Error during binary chunk upload:', err);
+      res.status(500).json({ error: err.message || 'Binary chunk upload failed' });
+    }
+  }
+);
+
+// 2. Base64 JSON Chunk Upload Endpoint (Fallback for environments without raw stream)
 app.post('/api/upload/chunk', (req, res) => {
   try {
-    const { uploadId, chunkIndex, totalChunks, fileName, mimeType, category, description, chunkBase64, totalSize } = req.body;
+    const { uploadId, chunkIndex, totalChunks, fileName, mimeType, category, description, chunkBase64, totalSize, offset } = req.body;
     if (!uploadId || chunkIndex === undefined || !totalChunks || !chunkBase64 || !fileName) {
       res.status(400).json({ error: 'Missing required chunk parameters.' });
       return;
@@ -1228,10 +1343,13 @@ app.post('/api/upload/chunk', (req, res) => {
     const rawData = commaIdx !== -1 ? chunkBase64.substring(commaIdx + 1) : chunkBase64;
     const chunkBuffer = Buffer.from(rawData, 'base64');
 
-    if (chunkIndex === 0) {
+    const byteOffset = offset !== undefined ? offset : chunkIndex * chunkBuffer.length;
+    if (chunkIndex === 0 && !fs.existsSync(tempFilePath)) {
       fs.writeFileSync(tempFilePath, chunkBuffer);
     } else {
-      fs.appendFileSync(tempFilePath, chunkBuffer);
+      const fd = fs.openSync(tempFilePath, fs.existsSync(tempFilePath) ? 'r+' : 'w');
+      fs.writeSync(fd, chunkBuffer, 0, chunkBuffer.length, byteOffset);
+      fs.closeSync(fd);
     }
 
     // If this is the last chunk, finalize the file
@@ -1249,7 +1367,8 @@ app.post('/api/upload/chunk', (req, res) => {
       const uniqueName = `${Date.now()}_${Math.random().toString(36).substring(2, 6)}_${safeBase}${ext}`;
       const finalPath = path.join(UPLOADS_DIR, uniqueName);
 
-      fs.renameSync(tempFilePath, finalPath);
+      fs.copyFileSync(tempFilePath, finalPath);
+      try { fs.unlinkSync(tempFilePath); } catch {}
       const stat = fs.statSync(finalPath);
 
       let determinedType: 'audio' | 'video' | 'image' | 'document' | 'other' = 'other';
